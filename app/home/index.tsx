@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
-import AgentAuraGL from '@/components/AgentAuraGL';
+import AssistantOrb from '@/components/AssistantOrb';
 import { useConnection } from '@/hooks/useConnection';
 import { useConversationList } from '@/hooks/useConversations';
 import { useDebugMode } from '@/hooks/useDebugMode';
@@ -124,14 +124,12 @@ export default function HomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="Tekan untuk bicara"
         >
-          <AgentAuraGL
+          <AssistantOrb
             size={197}
             color="#1FD5F9"
-            colorShift={0.3}
             state={agentState}
             themeMode="dark"
             audioTrack={microphoneTrack ?? undefined}
-            micIconSize={38}
           />
           <Text style={styles.micLabel}>Tekan untuk bicara</Text>
         </Pressable>

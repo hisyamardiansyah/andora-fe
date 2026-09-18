@@ -1,6 +1,6 @@
 import { useAgent } from '@livekit/components-react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import AgentAuraGL from '@/components/AgentAuraGL';
+import AssistantOrb from '@/components/AssistantOrb';
 import { Andora } from '@/constants/Andora';
 
 type AgentVisualizationProps = {
@@ -12,14 +12,12 @@ export default function AgentVisualization({ style }: AgentVisualizationProps) {
 
   return (
     <View style={[style, styles.container]}>
-      <AgentAuraGL
+      <AssistantOrb
         size={249}
         color="#1FD5F9"
-        colorShift={0.05}
         state={state}
         themeMode="light"
         audioTrack={microphoneTrack ?? undefined}
-        micIconSize={48}
       />
     </View>
   );

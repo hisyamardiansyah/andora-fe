@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
-import AgentAuraGL from '@/components/AgentAuraGL';
+import AssistantOrb from '@/components/AssistantOrb';
 import DebugBanner from '@/components/DebugBanner';
 import { useConnection } from '@/hooks/useConnection';
 import { useConversationDetail } from '@/hooks/useConversations';
@@ -375,14 +375,12 @@ export default function AssistantChatScreen() {
             accessibilityRole="button"
             accessibilityLabel="Tekan untuk bicara"
           >
-            <AgentAuraGL
+            <AssistantOrb
               size={150}
               color="#1FD5F9"
-              colorShift={0.3}
               state={agentState}
               themeMode="light"
               audioTrack={microphoneTrack ?? undefined}
-              micIconSize={38}
               style={isRecording ? styles.orbOuterActive : undefined}
             />
             <Text style={styles.micLabel}>
