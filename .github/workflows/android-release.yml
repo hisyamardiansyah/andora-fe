@@ -11,9 +11,9 @@ on:
         required: false
         type: string
       architectures:
-        description: 'ABI yang dibuild (dipisah koma). Pakai "arm64-v8a" saja agar build lebih cepat.'
+        description: 'ABI yang dibuild (dipisah koma). Default "arm64-v8a" saja agar build tercepat; tambah "armeabi-v7a" bila perlu dukung perangkat 32-bit lama.'
         required: false
-        default: 'arm64-v8a,armeabi-v7a'
+        default: 'arm64-v8a'
         type: string
       build_aab:
         description: 'Ikut build AAB (untuk upload ke Google Play)'
@@ -49,7 +49,7 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      ARCHITECTURES: ${{ inputs.architectures || 'arm64-v8a,armeabi-v7a' }}
+      ARCHITECTURES: ${{ inputs.architectures || 'arm64-v8a' }}
 
     steps:
       - name: Checkout
@@ -60,12 +60,14 @@ jobs:
         with:
           node-version: 22.x
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -73,7 +75,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('package-lock.json', 'app.json') }}
+            ~/.gradle/caches/modules-2
+            ~/.gradle/build-cache-*
+          key: ${{ runner.os }}-gradle-${{ hashFiles('package-lock.json', 'app.json', 'android/gradle.properties', 'android/settings.gradle') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -88,6 +92,8 @@ jobs:
       - name: Increase Gradle memory
         run: |
           sed -i 's/^org\.gradle\.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m/' android/gradle.properties
+          grep -q '^org.gradle.parallel=' android/gradle.properties || echo 'org.gradle.parallel=true' >> android/gradle.properties
+          grep -q '^org.gradle.caching=' android/gradle.properties || echo 'org.gradle.caching=true' >> android/gradle.properties
           grep '^org.gradle.jvmargs' android/gradle.properties
 
       - name: Decode release keystore & enable release signing
@@ -107,7 +113,8 @@ jobs:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --stacktrace -PreactNativeArchitectures="$ARCHITECTURES"
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+        run: ./gradlew assembleRelease --stacktrace --parallel --build-cache --max-workers=4 -PreactNativeArchitectures="$ARCHITECTURES"
         working-directory: android
 
       - name: Build release AAB
@@ -117,7 +124,8 @@ jobs:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease --stacktrace -PreactNativeArchitectures="$ARCHITECTURES"
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+        run: ./gradlew bundleRelease --stacktrace --parallel --build-cache --max-workers=4 -PreactNativeArchitectures="$ARCHITECTURES"
         working-directory: android
 
       - name: Collect artifacts
