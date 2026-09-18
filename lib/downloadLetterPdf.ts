@@ -1,5 +1,6 @@
 import { File, Paths } from 'expo-file-system';
 import type { DownloadOptions } from 'expo-file-system';
+import { letterDownloadUrl } from './letterSendRoutes';
 
 // Host label for error messages; falls back to raw URL.
 function backendHost(baseUrl: string): string {
@@ -15,13 +16,8 @@ export async function downloadLetterPdf(
   docId?: string,
   opts?: { accessToken?: string }
 ): Promise<string> {
-  const baseUrl = process.env.EXPO_PUBLIC_ANDORA_LETTER_URL;
-  if (!baseUrl) {
-    throw new Error(
-      'URL surat backend belum dikonfigurasi. Atur EXPO_PUBLIC_ANDORA_LETTER_URL.'
-    );
-  }
-  const url = docId ? `${baseUrl}?doc=${encodeURIComponent(docId)}` : baseUrl;
+  const url = letterDownloadUrl(docId);
+  const baseUrl = process.env.EXPO_PUBLIC_ANDORA_LETTER_URL as string;
   const file = new File(Paths.cache, 'andora-surat.pdf');
   const options: DownloadOptions = { idempotent: true };
   if (opts?.accessToken) {

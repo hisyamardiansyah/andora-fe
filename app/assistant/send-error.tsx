@@ -1,13 +1,21 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
+import { sendRetryRoute } from '@/lib/letterSendRoutes';
 
 // FIGMA Andora (Copy) yguOf0BB6X0G6FBhAVPHb9 node 54-357 -> /assistant/send-error.
 // WhatsApp failure state; retry goes to /assistant/send-retry.
 export default function SendErrorScreen() {
   const router = useRouter();
+  const { conversationId, message } = useLocalSearchParams<{
+    conversationId?: string;
+    message?: string;
+  }>();
+  const retryParams = sendRetryRoute(
+    typeof conversationId === 'string' ? conversationId : undefined
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -21,8 +29,11 @@ export default function SendErrorScreen() {
           WhatsApp tidak dapat mengirim dokumen untuk saat ini
         </Text>
         <Text style={styles.note}>Dokumen Anda tetap aman</Text>
+        {typeof message === 'string' && message ? (
+          <Text style={styles.hint}>{message}</Text>
+        ) : null}
         <Pressable
-          onPress={() => router.replace('/assistant/send-retry')}
+          onPress={() => router.replace(retryParams)}
           style={styles.primaryCta}
           accessibilityRole="button"
         >
@@ -74,6 +85,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: 312,
     marginTop: Andora.spacing.sm,
+    marginBottom: Andora.spacing.sm,
+  },
+  hint: {
+    color: Andora.colors.danger,
+    fontSize: Andora.typography.size.body,
+    fontWeight: Andora.typography.weight.medium,
+    textAlign: 'center',
+    width: 312,
     marginBottom: Andora.spacing.md,
   },
   primaryCta: {

@@ -11,6 +11,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import { downloadLetterPdf } from '@/lib/downloadLetterPdf';
+import {
+  resolveDocId,
+  sendErrorRoute,
+  sendOkRoute,
+} from '@/lib/letterSendRoutes';
 import { SHARE_CANCELLED_CODE, shareLetterToWhatsApp } from '@/lib/shareLetter';
 import { useSessionContext } from '@/hooks/useSession';
 
@@ -19,9 +24,10 @@ import { useSessionContext } from '@/hooks/useSession';
 // Requires a dev build (`npx expo run:android`); Expo Go will NOT work.
 export default function SendRetryScreen() {
   const router = useRouter();
-  const { title, recipient } = useLocalSearchParams<{
+  const { title, recipient, conversationId } = useLocalSearchParams<{
     title?: string;
     recipient?: string;
+    conversationId?: string;
   }>();
   const { accessToken } = useSessionContext();
   const [status, setStatus] = useState('Menyiapkan dokumen...');
@@ -31,30 +37,42 @@ export default function SendRetryScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const uri = await downloadLetterPdf(undefined, {
+        const docId = resolveDocId(
+          typeof conversationId === 'string' ? conversationId : undefined
+        );
+        const uri = await downloadLetterPdf(docId, {
           accessToken: accessToken ?? undefined,
         });
         if (cancelled) return;
         setStatus('Mengirim ulang dokumen Anda...');
         await shareLetterToWhatsApp(uri);
         if (cancelled) return;
-        router.replace('/assistant/send-result?ok=1');
+        router.replace(sendOkRoute(docId));
       } catch (error) {
         if (cancelled) return;
         if ((error as { code?: string })?.code === SHARE_CANCELLED_CODE) {
           router.replace('/home');
           return;
         }
-        if (error instanceof Error && error.message) {
-          setHint(`Unduhan/pengiriman gagal: ${error.message}`);
+        const failure =
+          error instanceof Error && error.message
+            ? error.message
+            : String(error);
+        if (failure) {
+          setHint(`Unduhan/pengiriman gagal: ${failure}`);
         }
-        router.replace('/assistant/send-error');
+        router.replace(
+          sendErrorRoute(
+            typeof conversationId === 'string' ? conversationId : undefined,
+            failure
+          )
+        );
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [router, accessToken]);
+  }, [router, accessToken, conversationId]);
 
   return (
     <SafeAreaView style={styles.safe}>

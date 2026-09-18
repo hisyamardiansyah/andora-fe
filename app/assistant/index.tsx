@@ -199,6 +199,17 @@ export default function AssistantChatScreen() {
     router.back();
   };
 
+  const openSending = () => {
+    if (typeof conversationId !== 'string' || !conversationId) return;
+    router.push({
+      pathname: '/assistant/sending',
+      params: {
+        conversationId,
+        title: detail?.title ?? 'Surat Andora',
+      },
+    });
+  };
+
   const handleMicIn = async () => {
     setVoiceError(null);
     try {
@@ -250,7 +261,18 @@ export default function AssistantChatScreen() {
           />
           <Text style={styles.brand}>Andora</Text>
         </View>
-        <View style={styles.headerSpacer} />
+        {typeof conversationId === 'string' && conversationId ? (
+          <Pressable
+            onPress={openSending}
+            style={styles.sendCta}
+            accessibilityRole="button"
+            accessibilityLabel="Kirim surat"
+          >
+            <Ionicons name="send" size={20} color={Andora.colors.onPrimary} />
+          </Pressable>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
       {debugEnabled ? <DebugBanner /> : null}
       {!isConnected ? (
@@ -424,6 +446,14 @@ const styles = StyleSheet.create({
     fontWeight: Andora.typography.weight.bold,
   },
   headerSpacer: { width: 44 },
+  sendCta: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Andora.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   statusBanner: {
     backgroundColor: Andora.colors.reminderBg,
     borderBottomWidth: 1,
