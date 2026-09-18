@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { SESSION_CANCELLED_CODE, useSessionContext } from '@/hooks/useSession';
 
 // Login screen matching Figma node 87-675 ("Profile"). Illustration and
@@ -19,7 +20,9 @@ export default function AuthScreen() {
   const router = useRouter();
   const { session, loading, configured, signInWithGoogle } =
     useSessionContext();
+  const { enableDebug } = useDebugMode();
   const [busy, setBusy] = useState(false);
+  const [debugBusy, setDebugBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,6 +44,17 @@ export default function AuthScreen() {
       }
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleDebugMode = async () => {
+    if (debugBusy) return;
+    setDebugBusy(true);
+    try {
+      await enableDebug();
+      router.replace('/home');
+    } finally {
+      setDebugBusy(false);
     }
   };
 
@@ -112,6 +126,26 @@ export default function AuthScreen() {
           </Text>
         ) : null}
 
+        <TouchableOpacity
+          onPress={() => void handleDebugMode()}
+          activeOpacity={0.85}
+          style={styles.debugButton}
+          accessibilityRole="button"
+          accessibilityLabel="Masuk mode debug"
+          disabled={debugBusy}
+        >
+          <Ionicons
+            name="bug-outline"
+            size={20}
+            color={Andora.colors.primary}
+          />
+          <Text style={styles.debugText}>
+            {debugBusy ? 'Membuka...' : 'Jelajahi Mode Debug'}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.debugHint}>
+          Lihat semua tampilan tanpa login dan tanpa backend.
+        </Text>
         <View style={styles.privacyRow}>
           <Ionicons
             name="lock-closed"
@@ -213,6 +247,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  debugButton: {
+    width: 380,
+    maxWidth: '100%',
+    height: 55,
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: Andora.colors.surface,
+    borderWidth: 1,
+    borderColor: Andora.colors.warning,
+    borderRadius: 20,
+  },
+  debugText: {
+    color: Andora.colors.primary,
+    fontSize: Andora.typography.size.title,
+    fontWeight: Andora.typography.weight.bold,
+    letterSpacing: -0.6,
+  },
+  debugHint: {
+    marginTop: 8,
+    color: Andora.colors.textMuted2,
+    fontSize: Andora.typography.size.body,
+    textAlign: 'center',
   },
   privacyText: {
     flex: 1,

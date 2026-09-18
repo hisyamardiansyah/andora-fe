@@ -1,10 +1,12 @@
 import { Redirect, Stack } from 'expo-router';
 import React from 'react';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
 export default function HomeLayout() {
   const { session, loading } = useSessionContext();
-  if (!loading && !session) {
+  const { debugEnabled, loading: debugLoading } = useDebugMode();
+  if (!loading && !debugLoading && !session && !debugEnabled) {
     return <Redirect href="/auth" />;
   }
   return (

@@ -16,8 +16,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AgentAuraGL from '@/components/AgentAuraGL';
+import DebugBanner from '@/components/DebugBanner';
 import { useConnection } from '@/hooks/useConnection';
 import { useConversationDetail } from '@/hooks/useConversations';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 import { useVoiceTurn } from '@/hooks/useVoiceTurn';
 import {
@@ -61,6 +63,7 @@ export default function AssistantChatScreen() {
   }>();
   const connection = useConnection();
   const { accessToken } = useSessionContext();
+  const { debugEnabled } = useDebugMode();
   const room = useMaybeRoomContext();
   // Resolved via SessionProvider room; every use below guards the offline state.
   const connectionState = useConnectionState();
@@ -249,6 +252,7 @@ export default function AssistantChatScreen() {
         </View>
         <View style={styles.headerSpacer} />
       </View>
+      {debugEnabled ? <DebugBanner /> : null}
       {!isConnected ? (
         <View style={styles.statusBanner}>
           <Text style={styles.statusText}>

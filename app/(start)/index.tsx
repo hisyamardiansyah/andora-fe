@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Andora } from '@/constants/Andora';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
 // Figma file yguOf0BB6X0G6FBhAVPHb9 node 18-1034 -> Splash Screen.
@@ -10,14 +11,15 @@ import { useSessionContext } from '@/hooks/useSession';
 export default function StartScreen() {
   const router = useRouter();
   const { session, loading } = useSessionContext();
+  const { debugEnabled, loading: debugLoading } = useDebugMode();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || debugLoading) return;
     const timer = setTimeout(() => {
-      router.replace(session ? '/home' : '/auth');
+      router.replace(session || debugEnabled ? '/home' : '/auth');
     }, 1500);
     return () => clearTimeout(timer);
-  }, [router, loading, session]);
+  }, [router, loading, session, debugEnabled, debugLoading]);
 
   return (
     <View style={styles.container}>

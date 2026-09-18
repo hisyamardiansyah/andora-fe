@@ -14,6 +14,7 @@ import AndoraNavbar from '@/components/AndoraNavbar';
 import AgentAuraGL from '@/components/AgentAuraGL';
 import { useConnection } from '@/hooks/useConnection';
 import { useConversationList } from '@/hooks/useConversations';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 import { useAgent } from '@livekit/components-react';
 
@@ -24,6 +25,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const connection = useConnection();
   const { accessToken } = useSessionContext();
+  const { debugEnabled } = useDebugMode();
   const { items, loading } = useConversationList();
   // SessionProvider always supplies session context, so useAgent is safe here
   // even before connect (reports disconnected -> gentle idle pulse).
@@ -56,7 +58,14 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.brand}>Andora</Text>
+        <View style={styles.brandRow}>
+          <Text style={styles.brand}>Andora</Text>
+          {debugEnabled ? (
+            <View style={styles.debugPill}>
+              <Text style={styles.debugPillText}>DEBUG</Text>
+            </View>
+          ) : null}
+        </View>
 
         <View style={styles.reminder}>
           <View style={styles.reminderHeader}>
@@ -140,12 +149,30 @@ const styles = StyleSheet.create({
     paddingBottom: Andora.spacing.xl,
     alignItems: 'center',
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: Andora.spacing.md,
+  },
+  debugPill: {
+    backgroundColor: Andora.colors.warning,
+    borderRadius: Andora.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  debugPillText: {
+    color: Andora.colors.primary,
+    fontSize: Andora.typography.size.caption,
+    fontWeight: Andora.typography.weight.bold,
+    letterSpacing: 1,
+  },
   brand: {
     color: Andora.colors.onPrimary,
     fontSize: 30,
     fontWeight: Andora.typography.weight.bold,
     textAlign: 'center',
-    marginBottom: Andora.spacing.md,
   },
   reminder: {
     width: 380,

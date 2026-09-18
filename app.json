@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "voice-assistant-react-native",
-    "slug": "voice-assistant-react-native",
+    "name": "Andora",
+    "slug": "andora",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/andora-logo-icon1.png",
     "scheme": "myapp",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -15,7 +15,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/andora-logo-icon1.png",
         "backgroundColor": "#0B0B10"
       },
       "package": "io.livekit.voiceassistantreactnative",
@@ -32,7 +32,7 @@
       ],
       "softwareKeyboardLayoutMode": "pan",
       "splash": {
-        "image": "./assets/images/icon.png",
+        "image": "./assets/images/andora-logo-icon1.png",
         "resizeMode": "contain",
         "backgroundColor": "#0B0B10"
       }
@@ -49,7 +49,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/andora-logo-icon1.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0B0B10"
@@ -64,7 +64,7 @@
       "typedRoutes": true
     },
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/andora-logo-icon1.png",
       "resizeMode": "contain",
       "backgroundColor": "#0B0B10"
     }

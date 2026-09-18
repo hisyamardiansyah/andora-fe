@@ -12,6 +12,7 @@ import 'react-native-reanimated';
 import { Andora } from '@/constants/Andora';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ConnectionProvider } from '@/hooks/useConnection';
+import { DebugProvider } from '@/hooks/useDebugMode';
 import { SessionProvider } from '@/hooks/useSession';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -48,21 +49,29 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SessionProvider>
-      <ConnectionProvider>
-        <ThemeProvider
-          value={colorScheme === 'dark' ? AndoraDarkTheme : AndoraLightTheme}
-        >
-          <Stack>
-            <Stack.Screen name="(start)" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="home" options={{ headerShown: false }} />
-            <Stack.Screen name="assistant" options={{ headerShown: false }} />
-          </Stack>
-          <StatusBar style="light" backgroundColor={Andora.colors.background} />
-        </ThemeProvider>
-      </ConnectionProvider>
-    </SessionProvider>
+    <DebugProvider>
+      <SessionProvider>
+        <ConnectionProvider>
+          <ThemeProvider
+            value={colorScheme === 'dark' ? AndoraDarkTheme : AndoraLightTheme}
+          >
+            <Stack>
+              <Stack.Screen name="(start)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="onboarding"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen name="auth" options={{ headerShown: false }} />
+              <Stack.Screen name="home" options={{ headerShown: false }} />
+              <Stack.Screen name="assistant" options={{ headerShown: false }} />
+            </Stack>
+            <StatusBar
+              style="light"
+              backgroundColor={Andora.colors.background}
+            />
+          </ThemeProvider>
+        </ConnectionProvider>
+      </SessionProvider>
+    </DebugProvider>
   );
 }
