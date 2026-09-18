@@ -218,10 +218,7 @@ export default function AssistantChatScreen() {
     setReadyDocs((prev) =>
       prev.some((d) => d.namaDokumen === namaDokumen && d.url === url)
         ? prev
-        : [
-            ...prev,
-            { id: `doc-${Date.now()}`, namaDokumen, url },
-          ]
+        : [...prev, { id: `doc-${Date.now()}`, namaDokumen, url }]
     );
     setDocNotice(`Dokumen ${namaDokumen} sudah siap.`);
   };
@@ -541,11 +538,7 @@ export default function AssistantChatScreen() {
               accessibilityLabel="Unggah dokumen PDF"
               disabled={uploadingDoc}
             >
-              <Ionicons
-                name="attach"
-                size={22}
-                color={Andora.colors.primary}
-              />
+              <Ionicons name="attach" size={22} color={Andora.colors.primary} />
             </Pressable>
             <TextInput
               value={draft}
