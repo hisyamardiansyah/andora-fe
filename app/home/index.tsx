@@ -4,17 +4,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import AgentAuraGL from '@/components/AgentAuraGL';
 import { useConnection } from '@/hooks/useConnection';
+import { useAgent } from '@livekit/components-react';
 
 // FIGMA Andora (Copy) 7IHCYJs2bVqT4uzuCJKzhF node 11-6 -> /home.
 // Dark brand screen, reminder card, mic CTA, Kirim Surat, bottom navbar.
 export default function HomeScreen() {
   const router = useRouter();
   const connection = useConnection();
+  // SessionProvider always supplies session context, so useAgent is safe here
+  // even before connect (reports disconnected -> gentle idle pulse).
+  const { state: agentState } = useAgent();
 
+  // Navigate first so the transcript screen always appears;
+  // the LiveKit session connects in the background instead.
   const startVoice = () => {
-    connection.connect();
     router.push('/assistant');
+    try {
+      connection.connect();
+    } catch {
+      // Assistant screen shows the offline state.
+    }
   };
 
   return (
@@ -70,21 +81,18 @@ export default function HomeScreen() {
         </Text>
 
         <Pressable
-          onPress={startVoice}
+          onPressIn={startVoice}
           style={styles.micWrap}
           accessibilityRole="button"
+          accessibilityLabel="Tekan untuk bicara"
         >
-          <View style={styles.orbOuter}>
-            <View style={styles.orbMiddle}>
-              <View style={styles.orbInner}>
-                <Ionicons
-                  name="mic"
-                  size={38}
-                  color={Andora.colors.onPrimary}
-                />
-              </View>
-            </View>
-          </View>
+          <AgentAuraGL
+            size={197}
+            color="#1FD5F9"
+            colorShift={0.3}
+            state={agentState}
+            themeMode="dark"
+          />
           <Text style={styles.micLabel}>Tekan untuk bicara</Text>
         </Pressable>
       </ScrollView>
@@ -188,31 +196,6 @@ const styles = StyleSheet.create({
     marginBottom: Andora.spacing.lg,
   },
   micWrap: { alignItems: 'center', gap: 5, marginBottom: Andora.spacing.lg },
-  orbOuter: {
-    width: 197,
-    height: 197,
-    borderRadius: 98.5,
-    borderWidth: 1,
-    borderColor: Andora.colors.onPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  orbMiddle: {
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    backgroundColor: '#9fc3e0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  orbInner: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#1f5fa8',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   micLabel: {
     color: Andora.colors.onPrimary,
     fontSize: Andora.typography.size.title,

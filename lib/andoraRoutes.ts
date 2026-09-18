@@ -1,7 +1,8 @@
 // Node-to-route map for Figma Andora (Copy) fileKey 7IHCYJs2bVqT4uzuCJKzhF.
 // Each Figma node-id maps to exactly one expo-router route; routes hosting
-// several nodes render them as states (e.g. /assistant covers listening,
-// processing, and chat variants).
+// several nodes render them as states; /assistant is now the transcript chat
+// (node 45-415, file yguOf0BB6X0G6FBhAVPHb9). Node 22-1254 keeps mapping to
+// /assistant/validate, which redirects to /assistant for old deep links.
 export const ANDORA_FILE_KEY = '7IHCYJs2bVqT4uzuCJKzhF';
 
 export const NODE_ROUTE_MAP = {

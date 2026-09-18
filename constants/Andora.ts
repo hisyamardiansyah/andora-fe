@@ -12,6 +12,7 @@ export const Andora = {
     onPrimary: '#FFFFFF',
     text: '#1f3247',
     textMuted: '#455668',
+    textMuted2: '#777e84',
     border: '#d7e3ee',
     borderStrong: 'rgba(69,86,104,0.6)',
     success: '#22C55E',

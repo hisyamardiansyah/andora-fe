@@ -6,6 +6,10 @@ export default function AssistantLayout() {
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="validate" options={{ headerShown: false }} />
+      <Stack.Screen name="sending" options={{ headerShown: false }} />
+      <Stack.Screen name="send-result" options={{ headerShown: false }} />
+      <Stack.Screen name="send-error" options={{ headerShown: false }} />
+      <Stack.Screen name="send-retry" options={{ headerShown: false }} />
     </Stack>
   );
 }
