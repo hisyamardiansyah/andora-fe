@@ -15,11 +15,17 @@ function isCancelMessage(message: unknown): boolean {
   return /cancel|did not share|dismiss/i.test(message);
 }
 
-// Shares a local PDF file directly to WhatsApp. The user picks the contact
+// Shares a local file directly to WhatsApp. The user picks the contact
 // inside WhatsApp with the file pre-attached and taps send.
-export async function shareLetterToWhatsApp(
+export interface ShareFileOptions {
+  mimeType?: string;
+  filename?: string;
+  message?: string;
+}
+
+export async function shareFileToWhatsApp(
   localUri: string,
-  message?: string
+  opts?: ShareFileOptions
 ): Promise<'shared'> {
   try {
     let Share: any;
@@ -33,9 +39,9 @@ export async function shareLetterToWhatsApp(
     }
     const result = await Share.shareSingle({
       url: localUri,
-      type: 'application/pdf',
-      filename: 'surat-andora',
-      message,
+      type: opts?.mimeType ?? 'application/pdf',
+      filename: opts?.filename ?? 'surat-andora',
+      message: opts?.message,
       social: Share.Social.WHATSAPP,
       failOnCancel: true,
     } as ShareSingleOptions);
@@ -52,4 +58,12 @@ export async function shareLetterToWhatsApp(
     }
     throw error;
   }
+}
+
+// Back-compat wrapper for the letter flow (PDF letter + optional message).
+export async function shareLetterToWhatsApp(
+  localUri: string,
+  message?: string
+): Promise<'shared'> {
+  return shareFileToWhatsApp(localUri, { message });
 }

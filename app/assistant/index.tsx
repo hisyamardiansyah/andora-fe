@@ -22,13 +22,21 @@ import { useConversationDetail } from '@/hooks/useConversations';
 import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 import { useVoiceTurn } from '@/hooks/useVoiceTurn';
+import * as DocumentPicker from 'expo-document-picker';
+import {
+  parseDocumentReady,
+  parseWhatsAppIntent,
+  uploadDocumentForConversation,
+} from '@/lib/andoraDocuments';
+import { downloadRemoteFile } from '@/lib/downloadLetterPdf';
+import { shareFileToWhatsApp } from '@/lib/shareLetter';
 import {
   useAgent,
   useConnectionState,
   useLocalParticipant,
   useMaybeRoomContext,
 } from '@livekit/components-react';
-import { ConnectionState } from 'livekit-client';
+import { ConnectionState, RoomEvent } from 'livekit-client';
 
 // FIGMA yguOf0BB6X0G6FBhAVPHb9 node 45-415 -> /assistant.
 // Transcript chat: opened with ?conversationId=<id> (&voice=1 to auto-join).
@@ -84,6 +92,13 @@ export default function AssistantChatScreen() {
   const [localItems, setLocalItems] = useState<ChatItem[]>([]);
   const [draft, setDraft] = useState('');
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [docNotice, setDocNotice] = useState<string | null>(null);
+  const [docError, setDocError] = useState<string | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [sharingDoc, setSharingDoc] = useState(false);
+  const [readyDocs, setReadyDocs] = useState<
+    { id: string; namaDokumen: string; url: string }[]
+  >([]);
   const scrollRef = useRef<ScrollView | null>(null);
   const autoJoinedRef = useRef(false);
 
@@ -197,6 +212,107 @@ export default function AssistantChatScreen() {
       // Offline: nothing to disconnect.
     }
     router.back();
+  };
+
+  const handleDocumentReady = (namaDokumen: string, url: string) => {
+    setReadyDocs((prev) =>
+      prev.some((d) => d.namaDokumen === namaDokumen && d.url === url)
+        ? prev
+        : [
+            ...prev,
+            { id: `doc-${Date.now()}`, namaDokumen, url },
+          ]
+    );
+    setDocNotice(`Dokumen ${namaDokumen} sudah siap.`);
+  };
+
+  const handleWhatsAppSignal = async (signal: {
+    phoneNumber: string;
+    fileUrl: string;
+    fileName: string;
+    caption?: string;
+  }) => {
+    setSharingDoc(true);
+    setDocError(null);
+    try {
+      const uri = await downloadRemoteFile(signal.fileUrl, signal.fileName);
+      const type = signal.fileName.toLowerCase().endsWith('.pdf')
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      await shareFileToWhatsApp(uri, {
+        mimeType: type,
+        filename: signal.fileName,
+        message: signal.caption,
+      });
+      setDocNotice(`WhatsApp terbuka untuk ${signal.phoneNumber}.`);
+    } catch (e) {
+      setDocError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSharingDoc(false);
+    }
+  };
+
+  // New document signals arrive on the same LiveKit data channel as
+  // andora.turn.* events: DOCUMENT_READY shows a download card, and
+  // OPEN_WHATSAPP_INTENT downloads the public file then opens WhatsApp.
+  useEffect(() => {
+    if (!room) return;
+    const onData = (payload: Uint8Array) => {
+      let data: unknown = null;
+      try {
+        data = JSON.parse(new TextDecoder().decode(payload)) as unknown;
+      } catch {
+        return;
+      }
+      const ready = parseDocumentReady(data);
+      if (ready) {
+        handleDocumentReady(ready.namaDokumen, ready.url);
+        return;
+      }
+      const intent = parseWhatsAppIntent(data);
+      if (intent) {
+        void handleWhatsAppSignal(intent);
+      }
+    };
+    room.on(RoomEvent.DataReceived, onData);
+    return () => {
+      room.off(RoomEvent.DataReceived, onData);
+    };
+  }, [room]);
+
+  const handlePickDocument = async () => {
+    if (typeof conversationId !== 'string' || !conversationId) {
+      setDocError('Pilih percakapan dulu sebelum mengunggah dokumen.');
+      return;
+    }
+    if (!accessToken) {
+      setDocError('Belum masuk. Masuk dulu dengan akun Google.');
+      return;
+    }
+    setDocError(null);
+    setDocNotice(null);
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled) return;
+      const asset = picked.assets?.[0];
+      if (!asset?.uri) {
+        throw new Error('Dokumen tidak terbaca. Coba file PDF lain.');
+      }
+      setUploadingDoc(true);
+      await uploadDocumentForConversation(fetch, accessToken, conversationId, {
+        uri: asset.uri,
+        name: asset.name ?? 'dokumen.pdf',
+        mimeType: asset.mimeType ?? 'application/pdf',
+      });
+      setDocNotice('Dokumen terunggah. Andora akan membacanya.');
+    } catch (e) {
+      setDocError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setUploadingDoc(false);
+    }
   };
 
   const openSending = () => {
@@ -363,6 +479,54 @@ export default function AssistantChatScreen() {
             <Text style={styles.stateText}>Suara: {voiceError}</Text>
           </View>
         ) : null}
+        {docNotice ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>{docNotice}</Text>
+          </View>
+        ) : null}
+        {docError ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>Dokumen: {docError}</Text>
+          </View>
+        ) : null}
+        {uploadingDoc ? (
+          <View style={styles.stateBox}>
+            <ActivityIndicator size="small" color={Andora.colors.primary} />
+            <Text style={styles.stateText}>Mengunggah dokumen...</Text>
+          </View>
+        ) : null}
+        {sharingDoc ? (
+          <View style={styles.stateBox}>
+            <ActivityIndicator size="small" color={Andora.colors.primary} />
+            <Text style={styles.stateText}>Menyiapkan WhatsApp...</Text>
+          </View>
+        ) : null}
+        {readyDocs.map((doc) => (
+          <View key={doc.id} style={styles.docCard}>
+            <View style={styles.docTop}>
+              <Ionicons
+                name="document-text"
+                size={28}
+                color={Andora.colors.primary}
+              />
+              <Text style={styles.docTitle}>{doc.namaDokumen}</Text>
+            </View>
+            <Text style={styles.docMeta}>Dokumen sudah dibuat backend.</Text>
+            <Pressable
+              onPress={() => void downloadRemoteFile(doc.url, doc.namaDokumen)}
+              style={styles.docCta}
+              accessibilityRole="button"
+              accessibilityLabel={`Unduh ${doc.namaDokumen}`}
+            >
+              <Ionicons
+                name="download"
+                size={18}
+                color={Andora.colors.onPrimary}
+              />
+              <Text style={styles.docCtaText}>Download</Text>
+            </Pressable>
+          </View>
+        ))}
       </ScrollView>
 
       <KeyboardAvoidingView
@@ -370,6 +534,19 @@ export default function AssistantChatScreen() {
       >
         <View style={styles.composer}>
           <View style={styles.inputRow}>
+            <Pressable
+              onPress={() => void handlePickDocument()}
+              style={styles.attachButton}
+              accessibilityRole="button"
+              accessibilityLabel="Unggah dokumen PDF"
+              disabled={uploadingDoc}
+            >
+              <Ionicons
+                name="attach"
+                size={22}
+                color={Andora.colors.primary}
+              />
+            </Pressable>
             <TextInput
               value={draft}
               onChangeText={setDraft}
@@ -550,6 +727,26 @@ const styles = StyleSheet.create({
     fontWeight: Andora.typography.weight.semibold,
     textAlign: 'right',
   },
+  docMeta: {
+    color: Andora.colors.textMuted,
+    fontSize: Andora.typography.size.body,
+    fontWeight: Andora.typography.weight.medium,
+  },
+  docCta: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: Andora.colors.primary,
+    borderRadius: 10,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Andora.spacing.md,
+  },
+  docCtaText: {
+    color: Andora.colors.onPrimary,
+    fontSize: Andora.typography.size.bodyLarge,
+    fontWeight: Andora.typography.weight.bold,
+  },
   stateBox: {
     backgroundColor: Andora.colors.surface,
     borderWidth: 1,
@@ -595,6 +792,16 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: Andora.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Andora.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: Andora.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -11,6 +11,34 @@ function backendHost(baseUrl: string): string {
   }
 }
 
+function safeFileName(name?: string, fallback = 'andora-dokumen'): string {
+  const cleaned = (name ?? '').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-');
+  return cleaned || fallback;
+}
+
+// Downloads any remote file (e.g. the public Supabase URL from the
+// OPEN_WHATSAPP_INTENT signal) to the app cache directory.
+export async function downloadRemoteFile(
+  url: string,
+  fileName?: string,
+  opts?: { accessToken?: string }
+): Promise<string> {
+  const file = new File(Paths.cache, safeFileName(fileName));
+  const options: DownloadOptions = { idempotent: true };
+  if (opts?.accessToken) {
+    options.headers = { Authorization: `Bearer ${opts.accessToken}` };
+  }
+  try {
+    await File.downloadFileAsync(url, file, options);
+  } catch (error) {
+    throw new Error(
+      `Gagal mengunduh dokumen dari ${backendHost(url)}: ` +
+        (error instanceof Error ? error.message : String(error))
+    );
+  }
+  return file.uri;
+}
+
 // Downloads the letter PDF to the app cache directory.
 export async function downloadLetterPdf(
   docId?: string,
