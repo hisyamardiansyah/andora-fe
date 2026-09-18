@@ -1,0 +1,115 @@
+// Andora design tokens — source: Figma Andora (Copy) fileKey 7IHCYJs2bVqT4uzuCJKzhF.
+// Nodes 18-1034 (splash), 11-6 (home), 21-1064 (listening), 22-1220 (processing),
+// 22-1254 (validate), 23-1311/29-1786 (chat), 43-356 (doc card), 41-121 (messages),
+// 43-217 (bottom sheet). Light theme. StyleSheet only, no Tailwind.
+export const Andora = {
+  colors: {
+    background: '#f7fbfc',
+    surface: '#FFFFFF',
+    surfaceElevated: '#e9f4fe',
+    primary: '#23364b',
+    primaryMuted: '#455668',
+    onPrimary: '#FFFFFF',
+    text: '#1f3247',
+    textMuted: '#455668',
+    border: '#d7e3ee',
+    borderStrong: 'rgba(69,86,104,0.6)',
+    success: '#22C55E',
+    warning: '#F59E0B',
+    danger: '#c52323',
+    overlay: 'rgba(35,54,75,0.64)',
+    brand: '#1f3247',
+    brandDeep: '#23364b',
+    bubbleUser: '#273a4f',
+    inputBg: '#e1ebf1',
+    reminderBg: '#fff7e2',
+    reminderBadge: '#ffdc7e',
+    navbarBg: '#f6f9fd',
+    splashBg: '#f4f9fc',
+    reminderTitle: '#2f3a45',
+    timeMuted: '#8c97a4',
+    messageMeta: 'rgba(74,79,85,0.8)',
+    inputPlaceholder: 'rgba(74,79,85,0.7)',
+    inputFilled: '#4a4f55',
+    sheetHandle: '#b3b3b3',
+    botBadge: 'rgba(233,244,254,0.9)',
+    logoRing: '#223242',
+    logoBadge: '#25384d',
+    navbarBorder: 'rgba(218,218,218,0.5)',
+    tabInactive: 'rgba(69,86,104,0.6)',
+    onBrandMuted: 'rgba(255, 255, 255, 0.72)',
+  },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    xl: 32,
+    xxl: 48,
+  },
+  radius: {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    pill: 999,
+  },
+  typography: {
+    family: {
+      regular: 'System',
+      medium: 'System',
+      semibold: 'System',
+      bold: 'System',
+    },
+    size: {
+      caption: 12,
+      body: 14,
+      bodyLarge: 16,
+      subtitle: 18,
+      title: 20,
+      heading: 24,
+      display: 32,
+    },
+    weight: {
+      regular: '400',
+      medium: '500',
+      semibold: '600',
+      bold: '700',
+    },
+    lineHeight: {
+      tight: 20,
+      normal: 24,
+      relaxed: 28,
+    },
+  },
+  shadows: {
+    none: {
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    sm: {
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.25,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    md: {
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+  },
+  opacity: {
+    disabled: 0.5,
+    overlay: 0.6,
+    subtle: 0.08,
+  },
+} as const;
+export type AndoraColors = keyof typeof Andora.colors;
+export type AndoraSpacing = keyof typeof Andora.spacing;
+export type AndoraRadius = keyof typeof Andora.radius;
+export type AndoraTypographySize = keyof typeof Andora.typography.size;
+

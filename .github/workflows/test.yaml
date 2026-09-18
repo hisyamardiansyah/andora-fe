@@ -1,0 +1,34 @@
+name: Test
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typescript
+        run: npm run typescript
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Run Tests
+        run: npm run ci:test -- --passWithNoTests
+
