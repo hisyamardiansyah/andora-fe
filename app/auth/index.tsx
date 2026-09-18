@@ -1,13 +1,23 @@
 import { useRouter } from 'expo-router';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 
-// Auth entry after /onboarding. Layout adapted from Andora tokens + local assets.
-// Flow: /onboarding -> /auth -> /home.
+// Auth entry: Supabase Google SSO placeholder. Currently bypasses to /home.
 export default function AuthScreen() {
   const router = useRouter();
 
   const goHome = () => router.replace('/home');
+
+  // TODO: wire to supabase.auth.signInWithOAuth({provider:'google'}) when EXPO_PUBLIC_SUPABASE_URL/KEY set — currently bypasses to /home.
+  const supabaseConfigured = false;
+
+  const handleGoogleSignIn = () => {
+    if (supabaseConfigured) {
+      return;
+    }
+    goHome();
+  };
 
   return (
     <View style={styles.container}>
@@ -18,26 +28,21 @@ export default function AuthScreen() {
         accessibilityLabel="Andora logo"
       />
       <Text style={styles.title}>Welcome to Andora</Text>
-      <Text style={styles.subtitle}>
-        Sign in to continue to your voice agent
-      </Text>
+      <Text style={styles.subtitle}>Sign in to continue</Text>
 
       <TouchableOpacity
-        onPress={goHome}
+        onPress={handleGoogleSignIn}
         activeOpacity={0.7}
-        style={styles.primaryButton}
+        style={styles.googleButton}
         accessibilityRole="button"
       >
-        <Text style={styles.primaryText}>Sign In</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={goHome}
-        activeOpacity={0.7}
-        style={styles.secondaryButton}
-        accessibilityRole="button"
-      >
-        <Text style={styles.secondaryText}>Continue as Guest</Text>
+        <Ionicons
+          name="logo-google"
+          size={20}
+          color={Andora.colors.text}
+          style={styles.googleIcon}
+        />
+        <Text style={styles.googleText}>Continue with Google</Text>
       </TouchableOpacity>
 
       <Text style={styles.terms}>
@@ -74,23 +79,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Andora.spacing.lg,
   },
-  primaryButton: {
-    backgroundColor: Andora.colors.primary,
-    borderRadius: Andora.radius.lg,
-    paddingVertical: Andora.spacing.md,
-    paddingHorizontal: Andora.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 220,
-    marginBottom: Andora.spacing.sm,
-  },
-  primaryText: {
-    color: Andora.colors.onPrimary,
-    fontSize: Andora.typography.size.bodyLarge,
-    fontWeight: Andora.typography.weight.semibold,
-  },
-  secondaryButton: {
-    borderColor: Andora.colors.borderStrong,
+  googleButton: {
+    flexDirection: 'row',
+    backgroundColor: Andora.colors.surface,
+    borderColor: Andora.colors.border,
     borderWidth: 1,
     borderRadius: Andora.radius.lg,
     paddingVertical: Andora.spacing.md,
@@ -100,10 +92,13 @@ const styles = StyleSheet.create({
     minWidth: 220,
     marginBottom: Andora.spacing.md,
   },
-  secondaryText: {
+  googleIcon: {
+    marginRight: Andora.spacing.sm,
+  },
+  googleText: {
     color: Andora.colors.text,
     fontSize: Andora.typography.size.bodyLarge,
-    fontWeight: Andora.typography.weight.medium,
+    fontWeight: Andora.typography.weight.semibold,
   },
   terms: {
     color: Andora.colors.textMuted,

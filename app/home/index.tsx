@@ -1,13 +1,7 @@
-import { Link, useRouter } from 'expo-router';
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
 import { useConnection } from '@/hooks/useConnection';
@@ -32,26 +26,42 @@ export default function HomeScreen() {
         <Text style={styles.brand}>Andora</Text>
 
         <View style={styles.reminder}>
-          <Text style={styles.reminderTitle}>Pengingat Ramah</Text>
-          <View style={styles.reminderCard}>
-            <View style={styles.reminderText}>
-              <Text style={styles.reminderHeading}>
-                Laporan Surat Kehilangan Dompet
-              </Text>
-              <Text style={styles.reminderBody}>Tenggat: 12 Oktober 2026</Text>
-            </View>
-            <View style={styles.reminderBadge}>
-              <Text style={styles.reminderBadgeText}>2 hari lagi</Text>
-            </View>
+          <View style={styles.reminderHeader}>
+            <Ionicons
+              name="notifications-outline"
+              size={20}
+              color={Andora.colors.onPrimary}
+            />
+            <Text style={styles.reminderTitle}>Pengingat Ramah</Text>
           </View>
-          <View style={styles.reminderCtaRow}>
-            <Pressable
-              onPress={startVoice}
-              style={styles.reminderCta}
-              accessibilityRole="button"
-            >
-              <Text style={styles.reminderCtaText}>Kirim Surat</Text>
-            </Pressable>
+          <View style={styles.reminderCard}>
+            <View style={styles.reminderTop}>
+              <View style={styles.reminderText}>
+                <Text style={styles.reminderHeading}>
+                  Laporan Surat Kehilangan Dompet
+                </Text>
+                <Text style={styles.reminderBody}>
+                  Tenggat: 12 Oktober 2026
+                </Text>
+              </View>
+              <View style={styles.reminderBadge}>
+                <Ionicons
+                  name="time-outline"
+                  size={20}
+                  color={Andora.colors.danger}
+                />
+                <Text style={styles.reminderBadgeText}>2 hari lagi</Text>
+              </View>
+            </View>
+            <View style={styles.reminderCtaRow}>
+              <Pressable
+                onPress={startVoice}
+                style={styles.reminderCta}
+                accessibilityRole="button"
+              >
+                <Text style={styles.reminderCtaText}>Kirim Surat</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
@@ -64,27 +74,19 @@ export default function HomeScreen() {
           style={styles.micWrap}
           accessibilityRole="button"
         >
-          <Image
-            source={require('@/assets/images/mic_24dp.png')}
-            style={styles.micIcon}
-          />
+          <View style={styles.orbOuter}>
+            <View style={styles.orbMiddle}>
+              <View style={styles.orbInner}>
+                <Ionicons
+                  name="mic"
+                  size={38}
+                  color={Andora.colors.onPrimary}
+                />
+              </View>
+            </View>
+          </View>
           <Text style={styles.micLabel}>Tekan untuk bicara</Text>
         </Pressable>
-
-        <View style={styles.quickRow}>
-          <Link href="/home/sessions" asChild>
-            <Pressable style={styles.quickCard}>
-              <Text style={styles.quickTitle}>Pesan</Text>
-              <Text style={styles.quickBody}>Percakapan dengan Andora</Text>
-            </Pressable>
-          </Link>
-          <Link href="/home/insight" asChild>
-            <Pressable style={styles.quickCard}>
-              <Text style={styles.quickTitle}>Dokumen</Text>
-              <Text style={styles.quickBody}>Surat siap kirim</Text>
-            </Pressable>
-          </Link>
-        </View>
       </ScrollView>
       <AndoraNavbar />
     </SafeAreaView>
@@ -92,27 +94,43 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Andora.colors.brand },
-  scroll: { padding: Andora.spacing.lg, paddingBottom: Andora.spacing.xl },
+  safe: { flex: 1, backgroundColor: '#1f3247' },
+  scroll: {
+    paddingHorizontal: Andora.spacing.md,
+    paddingTop: Andora.spacing.md,
+    paddingBottom: Andora.spacing.xl,
+    alignItems: 'center',
+  },
   brand: {
     color: Andora.colors.onPrimary,
     fontSize: 30,
     fontWeight: Andora.typography.weight.bold,
+    textAlign: 'center',
     marginBottom: Andora.spacing.md,
   },
   reminder: {
+    width: 380,
+    maxWidth: '100%',
     marginBottom: Andora.spacing.lg,
+  },
+  reminderHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: Andora.spacing.xs,
   },
   reminderTitle: {
     color: Andora.colors.onPrimary,
     fontSize: Andora.typography.size.bodyLarge,
     fontWeight: Andora.typography.weight.bold,
-    marginBottom: Andora.spacing.xs,
   },
   reminderCard: {
     backgroundColor: Andora.colors.reminderBg,
     borderRadius: 10,
-    padding: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  reminderTop: {
     flexDirection: 'row',
     gap: Andora.spacing.sm,
     alignItems: 'flex-start',
@@ -122,6 +140,7 @@ const styles = StyleSheet.create({
     color: Andora.colors.reminderTitle,
     fontSize: Andora.typography.size.subtitle,
     fontWeight: Andora.typography.weight.semibold,
+    width: 181,
   },
   reminderBody: {
     color: Andora.colors.primaryMuted,
@@ -130,8 +149,12 @@ const styles = StyleSheet.create({
   reminderBadge: {
     backgroundColor: Andora.colors.reminderBadge,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    width: 98,
+    height: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
   reminderBadgeText: {
     color: Andora.colors.danger,
@@ -139,10 +162,6 @@ const styles = StyleSheet.create({
     fontWeight: Andora.typography.weight.semibold,
   },
   reminderCtaRow: {
-    backgroundColor: Andora.colors.reminderBg,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    padding: 15,
     paddingTop: 7,
     alignItems: 'flex-end',
   },
@@ -164,30 +183,40 @@ const styles = StyleSheet.create({
     fontSize: Andora.typography.size.title,
     fontWeight: Andora.typography.weight.semibold,
     lineHeight: Andora.typography.lineHeight.relaxed,
+    textAlign: 'center',
+    width: 312,
     marginBottom: Andora.spacing.lg,
   },
-  micWrap: { alignItems: 'center', marginBottom: Andora.spacing.lg },
-  micIcon: { width: 64, height: 64, marginBottom: Andora.spacing.sm },
+  micWrap: { alignItems: 'center', gap: 5, marginBottom: Andora.spacing.lg },
+  orbOuter: {
+    width: 197,
+    height: 197,
+    borderRadius: 98.5,
+    borderWidth: 1,
+    borderColor: Andora.colors.onPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orbMiddle: {
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: '#9fc3e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orbInner: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#1f5fa8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   micLabel: {
     color: Andora.colors.onPrimary,
     fontSize: Andora.typography.size.title,
     fontWeight: Andora.typography.weight.bold,
-  },
-  quickRow: { flexDirection: 'row', gap: Andora.spacing.md },
-  quickCard: {
-    flex: 1,
-    backgroundColor: Andora.colors.surface,
-    borderRadius: Andora.radius.md,
-    padding: Andora.spacing.md,
-  },
-  quickTitle: {
-    color: Andora.colors.text,
-    fontSize: Andora.typography.size.bodyLarge,
-    fontWeight: Andora.typography.weight.semibold,
-    marginBottom: Andora.spacing.xs,
-  },
-  quickBody: {
-    color: Andora.colors.textMuted,
-    fontSize: Andora.typography.size.body,
+    textAlign: 'center',
   },
 });

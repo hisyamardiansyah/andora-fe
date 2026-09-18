@@ -19,7 +19,12 @@ const TABS = [
     href: '/home/insight',
     icon: 'document-text-outline',
   },
-  { key: 'auth', label: 'Profil', href: '/auth', icon: 'person-outline' },
+  {
+    key: 'profile',
+    label: 'Profil',
+    href: '/home/profile',
+    icon: 'person-outline',
+  },
 ] as const;
 
 export default function AndoraNavbar() {

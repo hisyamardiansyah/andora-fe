@@ -7,6 +7,7 @@ export default function HomeLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="sessions" options={{ headerShown: false }} />
       <Stack.Screen name="insight" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
     </Stack>
   );
 }
