@@ -112,4 +112,3 @@ export type AndoraColors = keyof typeof Andora.colors;
 export type AndoraSpacing = keyof typeof Andora.spacing;
 export type AndoraRadius = keyof typeof Andora.radius;
 export type AndoraTypographySize = keyof typeof Andora.typography.size;
-

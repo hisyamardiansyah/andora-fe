@@ -13,12 +13,22 @@ export default function ValidateScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.body}>
         <View style={styles.doneBadge}>
-          <Ionicons name="checkmark" size={48} color={Andora.colors.onPrimary} />
+          <Ionicons
+            name="checkmark"
+            size={48}
+            color={Andora.colors.onPrimary}
+          />
         </View>
         <Text style={styles.title}>Andora paham, Anda ingin:</Text>
         <View style={styles.card}>
-          <Ionicons name="document-text" size={54} color={Andora.colors.primary} />
-          <Text style={styles.cardTitle}>Membuat surat keterangan tidak mampu</Text>
+          <Ionicons
+            name="document-text"
+            size={54}
+            color={Andora.colors.primary}
+          />
+          <Text style={styles.cardTitle}>
+            Membuat surat keterangan tidak mampu
+          </Text>
         </View>
         <Text style={styles.question}>Apakah ini sudah benar?</Text>
 
@@ -51,7 +61,12 @@ export default function ValidateScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Andora.colors.background },
-  body: { flex: 1, padding: Andora.spacing.lg, alignItems: 'center', justifyContent: 'center' },
+  body: {
+    flex: 1,
+    padding: Andora.spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   doneBadge: {
     width: 91,
     height: 88,

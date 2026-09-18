@@ -1,5 +1,12 @@
 import { Link, useRouter } from 'expo-router';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
@@ -18,14 +25,19 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.brand}>Andora</Text>
 
         <View style={styles.reminder}>
           <Text style={styles.reminderTitle}>Pengingat Ramah</Text>
           <View style={styles.reminderCard}>
             <View style={styles.reminderText}>
-              <Text style={styles.reminderHeading}>Laporan Surat Kehilangan Dompet</Text>
+              <Text style={styles.reminderHeading}>
+                Laporan Surat Kehilangan Dompet
+              </Text>
               <Text style={styles.reminderBody}>Tenggat: 12 Oktober 2026</Text>
             </View>
             <View style={styles.reminderBadge}>
@@ -33,16 +45,29 @@ export default function HomeScreen() {
             </View>
           </View>
           <View style={styles.reminderCtaRow}>
-            <Pressable onPress={startVoice} style={styles.reminderCta} accessibilityRole="button">
+            <Pressable
+              onPress={startVoice}
+              style={styles.reminderCta}
+              accessibilityRole="button"
+            >
               <Text style={styles.reminderCtaText}>Kirim Surat</Text>
             </Pressable>
           </View>
         </View>
 
-        <Text style={styles.greeting}>Halo, saya Andora. Ada yang bisa saya bantu untuk mengurus dokumen?</Text>
+        <Text style={styles.greeting}>
+          Halo, saya Andora. Ada yang bisa saya bantu untuk mengurus dokumen?
+        </Text>
 
-        <Pressable onPress={startVoice} style={styles.micWrap} accessibilityRole="button">
-          <Image source={require('@/assets/images/mic_24dp.png')} style={styles.micIcon} />
+        <Pressable
+          onPress={startVoice}
+          style={styles.micWrap}
+          accessibilityRole="button"
+        >
+          <Image
+            source={require('@/assets/images/mic_24dp.png')}
+            style={styles.micIcon}
+          />
           <Text style={styles.micLabel}>Tekan untuk bicara</Text>
         </Pressable>
 
@@ -108,7 +133,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  reminderBadgeText: { color: Andora.colors.danger, fontSize: Andora.typography.size.body, fontWeight: Andora.typography.weight.semibold },
+  reminderBadgeText: {
+    color: Andora.colors.danger,
+    fontSize: Andora.typography.size.body,
+    fontWeight: Andora.typography.weight.semibold,
+  },
   reminderCtaRow: {
     backgroundColor: Andora.colors.reminderBg,
     borderBottomLeftRadius: 10,
@@ -151,6 +180,14 @@ const styles = StyleSheet.create({
     borderRadius: Andora.radius.md,
     padding: Andora.spacing.md,
   },
-  quickTitle: { color: Andora.colors.text, fontSize: Andora.typography.size.bodyLarge, fontWeight: Andora.typography.weight.semibold, marginBottom: Andora.spacing.xs },
-  quickBody: { color: Andora.colors.textMuted, fontSize: Andora.typography.size.body },
+  quickTitle: {
+    color: Andora.colors.text,
+    fontSize: Andora.typography.size.bodyLarge,
+    fontWeight: Andora.typography.weight.semibold,
+    marginBottom: Andora.spacing.xs,
+  },
+  quickBody: {
+    color: Andora.colors.textMuted,
+    fontSize: Andora.typography.size.body,
+  },
 });

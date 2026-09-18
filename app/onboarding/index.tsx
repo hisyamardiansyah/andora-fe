@@ -1,12 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Andora } from '@/constants/Andora';
 
 // Pre-auth flow: intro step -> product step -> /auth.
@@ -78,7 +72,9 @@ export default function OnboardingScreen() {
         style={styles.button}
         accessibilityRole="button"
       >
-        <Text style={styles.buttonText}>{last ? 'Get Started' : 'Continue'}</Text>
+        <Text style={styles.buttonText}>
+          {last ? 'Get Started' : 'Continue'}
+        </Text>
       </TouchableOpacity>
     </View>
   );

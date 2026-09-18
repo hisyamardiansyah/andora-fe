@@ -7,6 +7,7 @@ module.exports = {
     'prettier/prettier': [
       'error',
       {
+        endOfLine: 'lf',
         quoteProps: 'consistent',
         singleQuote: true,
         tabWidth: 2,

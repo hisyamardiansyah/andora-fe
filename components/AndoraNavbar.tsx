@@ -7,8 +7,18 @@ import { Andora } from '@/constants/Andora';
 // 118px bar, rounded-t 25px; active tab semibold brand, rest muted.
 const TABS = [
   { key: 'home', label: 'Beranda', href: '/home', icon: 'home' },
-  { key: 'sessions', label: 'Pesan', href: '/home/sessions', icon: 'chatbubble-ellipses-outline' },
-  { key: 'insight', label: 'Dokumen', href: '/home/insight', icon: 'document-text-outline' },
+  {
+    key: 'sessions',
+    label: 'Pesan',
+    href: '/home/sessions',
+    icon: 'chatbubble-ellipses-outline',
+  },
+  {
+    key: 'insight',
+    label: 'Dokumen',
+    href: '/home/insight',
+    icon: 'document-text-outline',
+  },
   { key: 'auth', label: 'Profil', href: '/auth', icon: 'person-outline' },
 ] as const;
 
@@ -29,7 +39,9 @@ export default function AndoraNavbar() {
                 size={30}
                 color={active ? Andora.colors.brand : Andora.colors.tabInactive}
               />
-              <Text style={[styles.label, active ? styles.labelActive : undefined]}>
+              <Text
+                style={[styles.label, active ? styles.labelActive : undefined]}
+              >
                 {tab.label}
               </Text>
             </Pressable>

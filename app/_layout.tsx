@@ -1,4 +1,8 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -44,7 +48,9 @@ export default function RootLayout() {
 
   return (
     <ConnectionProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? AndoraDarkTheme : AndoraLightTheme}>
+      <ThemeProvider
+        value={colorScheme === 'dark' ? AndoraDarkTheme : AndoraLightTheme}
+      >
         <Stack>
           <Stack.Screen name="(start)" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />

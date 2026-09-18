@@ -1,11 +1,5 @@
 import { useRouter } from 'expo-router';
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Andora } from '@/constants/Andora';
 
 // Auth entry after /onboarding. Layout adapted from Andora tokens + local assets.
@@ -24,7 +18,9 @@ export default function AuthScreen() {
         accessibilityLabel="Andora logo"
       />
       <Text style={styles.title}>Welcome to Andora</Text>
-      <Text style={styles.subtitle}>Sign in to continue to your voice agent</Text>
+      <Text style={styles.subtitle}>
+        Sign in to continue to your voice agent
+      </Text>
 
       <TouchableOpacity
         onPress={goHome}

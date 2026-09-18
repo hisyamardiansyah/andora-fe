@@ -151,7 +151,9 @@ const RoomView = () => {
         <View style={styles.statusDot} />
         <Text style={styles.headerTitle}>Andora Mendengarkan...</Text>
       </View>
-      <Text style={styles.headerSubtitle}>Silakan deskripsikan kebutuhan dokumen anda</Text>
+      <Text style={styles.headerSubtitle}>
+        Silakan deskripsikan kebutuhan dokumen anda
+      </Text>
       <View style={styles.spacer} />
       <ChatLog style={styles.logContainer} messages={messages} />
       <ChatBar
@@ -184,8 +186,12 @@ const RoomView = () => {
         </Pressable>
       </Link>
 
-      <Pressable onPress={onExitClick} style={styles.cancelCta} accessibilityRole="button">
-        <Text style={styles.cancelCtaText}>✕   Batalkan</Text>
+      <Pressable
+        onPress={onExitClick}
+        style={styles.cancelCta}
+        accessibilityRole="button"
+      >
+        <Text style={styles.cancelCtaText}>✕ Batalkan</Text>
       </Pressable>
 
       <ControlBar

@@ -26,7 +26,11 @@ export default function StartScreen() {
           accessibilityLabel="Andora logo"
         />
         <View style={styles.logoBadge}>
-          <Ionicons name="document-text" size={64} color={Andora.colors.onPrimary} />
+          <Ionicons
+            name="document-text"
+            size={64}
+            color={Andora.colors.onPrimary}
+          />
         </View>
       </View>
       <Text style={styles.title}>Andora</Text>

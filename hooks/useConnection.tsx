@@ -1,4 +1,8 @@
-import { TokenSource, type TokenSourceFetchOptions, type TokenSourceResponseObject } from 'livekit-client';
+import {
+  TokenSource,
+  type TokenSourceFetchOptions,
+  type TokenSourceResponseObject,
+} from 'livekit-client';
 import { createContext, useContext, useMemo, useState } from 'react';
 import { SessionProvider, useSession } from '@livekit/components-react';
 import { parseAndoraTokenResponse } from '@/lib/andoraToken';
@@ -10,9 +14,11 @@ const agentName = process.env.EXPO_PUBLIC_LIVEKIT_AGENT_NAME || undefined;
 const hardcodedUrl = '';
 const hardcodedToken = '';
 
-const homepageAgentUrl = "https://livekit.com/api/homepage-agent/token";
+const homepageAgentUrl = 'https://livekit.com/api/homepage-agent/token';
 
-async function fetchAndoraToken(options: TokenSourceFetchOptions): Promise<TokenSourceResponseObject> {
+async function fetchAndoraToken(
+  options: TokenSourceFetchOptions
+): Promise<TokenSourceResponseObject> {
   const res = await fetch(andoraTokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -65,12 +71,18 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       return TokenSource.sandboxTokenServer(sandboxID);
     }
     if (hardcodedUrl && hardcodedToken) {
-      return TokenSource.literal({ serverUrl: hardcodedUrl, participantToken: hardcodedToken });
+      return TokenSource.literal({
+        serverUrl: hardcodedUrl,
+        participantToken: hardcodedToken,
+      });
     }
     return TokenSource.endpoint(homepageAgentUrl);
   }, []);
 
-  const session = useSession(tokenSource, agentName ? { agentName } : undefined);
+  const session = useSession(
+    tokenSource,
+    agentName ? { agentName } : undefined
+  );
   const { start: startSession, end: endSession } = session;
 
   const value = useMemo(() => {
@@ -89,7 +101,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
   return (
     <SessionProvider session={session}>
-      <ConnectionContext.Provider value={value}>{children}</ConnectionContext.Provider>
+      <ConnectionContext.Provider value={value}>
+        {children}
+      </ConnectionContext.Provider>
     </SessionProvider>
   );
 }

@@ -52,7 +52,9 @@ export default function AgentVisualization({ style }: AgentVisualizationProps) {
           style={styles.barVisualizer}
         />
       </View>
-      {!hasAgent && <Text style={styles.waitingText}>Memahami Kebutuhan Anda...</Text>}
+      {!hasAgent && (
+        <Text style={styles.waitingText}>Memahami Kebutuhan Anda...</Text>
+      )}
       {videoView}
     </View>
   );
