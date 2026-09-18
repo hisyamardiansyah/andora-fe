@@ -17,7 +17,9 @@ export default function SendErrorScreen() {
           <Ionicons name="warning" size={120} color={Andora.colors.danger} />
         </View>
         <Text style={styles.error}>Dokumen belum terkirim</Text>
-        <Text style={styles.error}>WhatsApp tidak dapat mengirim dokumen untuk saat ini</Text>
+        <Text style={styles.error}>
+          WhatsApp tidak dapat mengirim dokumen untuk saat ini
+        </Text>
         <Text style={styles.note}>Dokumen Anda tetap aman</Text>
         <Pressable
           onPress={() => router.replace('/assistant/send-retry')}
@@ -40,7 +42,12 @@ export default function SendErrorScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Andora.colors.background },
-  body: { flex: 1, padding: Andora.spacing.lg, alignItems: 'center', justifyContent: 'center' },
+  body: {
+    flex: 1,
+    padding: Andora.spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   brand: {
     color: Andora.colors.text,
     fontSize: 30,
@@ -48,7 +55,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Andora.spacing.md,
   },
-  visual: { width: 220, height: 211, alignItems: 'center', justifyContent: 'center' },
+  visual: {
+    width: 220,
+    height: 211,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   error: {
     color: Andora.colors.danger,
     fontSize: Andora.typography.size.title,

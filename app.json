@@ -56,7 +56,9 @@
         }
       ],
       "expo-font",
-      "./plugins/withReactNativeShare"
+      "./plugins/withReactNativeShare",
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

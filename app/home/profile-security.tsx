@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +21,10 @@ export default function ProfileSecurityScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerRow}>
           <Pressable
             onPress={() => router.back()}
@@ -22,46 +32,72 @@ export default function ProfileSecurityScreen() {
             accessibilityRole="button"
             accessibilityLabel="Kembali"
           >
-            <Ionicons name="chevron-back" size={24} color={Andora.colors.primary} />
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={Andora.colors.primary}
+            />
           </Pressable>
           <View style={styles.headerText}>
             <Text style={styles.title}>Keamanan & Privasi</Text>
-            <Text style={styles.subtitle}>Kelola keamanan dan privasi akun</Text>
+            <Text style={styles.subtitle}>
+              Kelola keamanan dan privasi akun
+            </Text>
           </View>
         </View>
 
         <View style={styles.list}>
           <View style={styles.card}>
             <View style={styles.iconCircle}>
-              <Ionicons name="lock-closed" size={24} color={Andora.colors.primary} />
+              <Ionicons
+                name="lock-closed"
+                size={24}
+                color={Andora.colors.primary}
+              />
             </View>
             <View style={styles.cardText}>
               <Text style={styles.cardTitle}>Kunci PIN Aplikasi</Text>
-              <Text style={styles.cardSubtitle}>Minta PIN setiap membuka aplikasi</Text>
+              <Text style={styles.cardSubtitle}>
+                Minta PIN setiap membuka aplikasi
+              </Text>
             </View>
             <Switch value={pinLock} onValueChange={setPinLock} />
           </View>
 
           <View style={styles.card}>
             <View style={styles.iconCircle}>
-              <Ionicons name="shield-checkmark" size={24} color={Andora.colors.primary} />
+              <Ionicons
+                name="shield-checkmark"
+                size={24}
+                color={Andora.colors.primary}
+              />
             </View>
             <View style={styles.cardText}>
               <Text style={styles.cardTitle}>Login Biometrik</Text>
-              <Text style={styles.cardSubtitle}>Masuk dengan sidik jari atau wajah</Text>
+              <Text style={styles.cardSubtitle}>
+                Masuk dengan sidik jari atau wajah
+              </Text>
             </View>
             <Switch value={biometric} onValueChange={setBiometric} />
           </View>
 
           <View style={styles.card}>
             <View style={styles.iconCircle}>
-              <Ionicons name="phone-portrait" size={24} color={Andora.colors.primary} />
+              <Ionicons
+                name="phone-portrait"
+                size={24}
+                color={Andora.colors.primary}
+              />
             </View>
             <View style={styles.cardText}>
               <Text style={styles.cardTitle}>Sesi Aktif</Text>
               <Text style={styles.cardSubtitle}>1 perangkat</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Andora.colors.primaryMuted} />
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={Andora.colors.primaryMuted}
+            />
           </View>
         </View>
 
@@ -73,7 +109,9 @@ export default function ProfileSecurityScreen() {
           <Text style={styles.deleteText}>Hapus Data</Text>
         </Pressable>
         {confirmDelete ? (
-          <Text style={styles.confirmText}>Hapus data dibatalkan. Data Anda tetap aman.</Text>
+          <Text style={styles.confirmText}>
+            Hapus data dibatalkan. Data Anda tetap aman.
+          </Text>
         ) : null}
       </ScrollView>
       <AndoraNavbar />

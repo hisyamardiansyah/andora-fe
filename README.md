@@ -82,17 +82,15 @@ Splash (start)
 
 | Feature | Status | Location |
 | --- | --- | --- |
-| Splash with automatic redirect | Done | `app/(start)/index.tsx` |
-| Google sign-in screen (SSO placeholder) | Done | `app/auth/index.tsx` |
-| Home: centered title, bell and clock icons, mic orb | Done | `app/home/index.tsx` |
-| Listening screen matching Figma 21-1064 | Done | `app/assistant/index.tsx` |
+| Splash with session-aware redirect | Done | `app/(start)/index.tsx` |
+| Google sign-in via Supabase SSO | Done | `app/auth/index.tsx` |
+| Home: latest conversation reminder, mic orb | Done | `app/home/index.tsx` |
+| Transcript chat from backend plus voice push-to-talk | Done | `app/assistant/index.tsx` |
 | Agent visualization (orb plus waveform) | Done | `app/assistant/ui/AgentVisualization.tsx` |
-| Comprehension confirmation before continuing | Done | `app/assistant/validate.tsx` |
-| Message list plus new-request sheet | Done | `app/home/sessions.tsx` |
-| Document list (cards only) | Done | `app/home/insight.tsx` |
-| Profile plus sign-out to sign-in | Done | `app/home/profile.tsx` |
+| Message list (backend) plus new-conversation sheet | Done | `app/home/sessions.tsx` |
+| Document list (backend conversations) | Done | `app/home/insight.tsx` |
+| Profile plus Supabase sign-out | Done | `app/home/profile.tsx` |
 | Bottom navigation (Home/Messages/Documents/Profile) | Done | `components/AndoraNavbar.tsx` |
-| Full Supabase Google login | Next | See [Roadmap](#roadmap) |
 
 ---
 
@@ -117,27 +115,41 @@ Splash (start)
 ```text
 .
 ├── app/                        # Expo Router — one file equals one route
-│   ├── _layout.tsx             # Root stack plus ConnectionProvider plus Andora theme
-│   ├── (start)/index.tsx       # Splash screen, redirects to /auth
+│   ├── _layout.tsx             # Root stack plus SessionProvider, ConnectionProvider, Andora theme
+│   ├── (start)/index.tsx       # Splash screen, session-aware redirect to /auth or /home
 │   ├── onboarding/index.tsx    # Deprecated — redirects to /auth only
-│   ├── auth/index.tsx          # Google sign-in (SSO placeholder)
+│   ├── auth/
+│   │   ├── _layout.tsx         # Stack: index, callback
+│   │   ├── index.tsx           # Google sign-in via Supabase SSO
+│   │   └── callback.tsx        # OAuth return target, forwards to /home or /auth
 │   ├── home/
-│   │   ├── _layout.tsx         # Stack: index, sessions, insight, profile
-│   │   ├── index.tsx           # Home (Figma 11-6)
-│   │   ├── sessions.tsx        # Messages (Figma 41-121)
-│   │   ├── insight.tsx         # Documents — card list only
-│   │   └── profile.tsx         # Profile plus sign-out
+│   │   ├── _layout.tsx         # Stack: index, sessions, insight, profile*
+│   │   ├── index.tsx           # Home (Figma 11-6), latest-conversation reminder
+│   │   ├── sessions.tsx        # Messages from GET /conversations (?search=)
+│   │   ├── insight.tsx         # Documents from GET /conversations
+│   │   └── profile.tsx         # Profile from Supabase session plus sign-out
 │   └── assistant/
-│       ├── _layout.tsx         # Stack: index, validate
-│       ├── index.tsx           # Listening screen (Figma 21-1064)
-│       ├── validate.tsx        # Comprehension check (Figma 22-1254)
+│       ├── _layout.tsx         # Stack: index, validate, sending, send-result, send-error, send-retry
+│       ├── index.tsx           # Transcript chat (backend) + voice push-to-talk
+│       ├── validate.tsx        # Legacy redirect to /assistant
+│       ├── sending.tsx         # PDF download + WhatsApp share with auth token
+│       ├── send-retry.tsx      # Resend with auth token
 │       └── ui/                 # AgentVisualization, ChatBar, ChatLog, ControlBar
 ├── components/AndoraNavbar.tsx # Shared bottom navigation
 ├── constants/Andora.ts         # Color, spacing, radius, and typography tokens
-├── hooks/useConnection.tsx     # LiveKit connection (token server / sandbox)
+├── hooks/
+│   ├── useConnection.tsx       # LiveKit connection via POST /livekit/token (Bearer)
+│   ├── useConversations.ts     # Backend conversation list/detail/send hooks
+│   ├── useSession.tsx          # Supabase Google SSO session provider
+│   └── useVoiceTurn.ts         # RPC hold/release + andora.turn.* event state
 ├── lib/
+│   ├── andoraApi.ts            # Pure REST client for andora-be
 │   ├── andoraRoutes.ts         # Figma node to route mapping
-│   └── andoraToken.ts          # Token server response parser
+│   ├── andoraToken.ts          # Token parser + turn-event reducer + RPC helpers
+│   ├── downloadLetterPdf.ts    # Backend PDF download with optional Bearer token
+│   ├── shareLetter.ts          # WhatsApp share with cancel detection
+│   └── supabase.ts             # Supabase client singleton
+├── __tests__/                  # Jest contract + unit tests (jest-expo)
 ├── assets/images/              # App icons and illustrations
 ├── scripts/ci/                 # CI utilities (Android release signing patch)
 ├── setup/livekitSetup.ts       # LiveKit setup guide and helpers
@@ -214,12 +226,13 @@ Never store private keys or release credentials in this file.
 
 | Variable | Required | Example | Purpose |
 | --- | --- | --- | --- |
-| `EXPO_PUBLIC_ANDORA_TOKEN_URL` | Yes (production) | `https://token.andora.id/api/token` | Andora LiveKit token endpoint |
-| `EXPO_PUBLIC_LIVEKIT_AGENT_NAME` | No | `andora-voice-agent` | Name of the agent to contact |
-| `EXPO_PUBLIC_LIVEKIT_SANDBOX_ID` | No | `abc123…` | LiveKit sandbox fallback when the token URL is empty |
-| `EXPO_PUBLIC_SUPABASE_URL` | Later | `https://xyz.supabase.co` | Supabase base URL (full SSO) |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Later | `eyJhbGciOi…` | Supabase public key (never the service role key) |
+| `EXPO_PUBLIC_ANDORA_API_URL` | Yes | `http://10.0.2.2:8000` | Base URL backend andora-be (Android emulator loopback; use `http://127.0.0.1:8000` on iOS/web) |
+| `EXPO_PUBLIC_SUPABASE_URL` | Yes (login) | `https://xyz.supabase.co` | Supabase project URL for Google SSO |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Yes (login) | `eyJhbGciOi…` | Supabase public anon key (never the service role key) |
 | `EXPO_PUBLIC_ANDORA_LETTER_URL` | Yes (real send) | `https://api.andora.id/letters/surat.pdf` | Backend PDF URL for WhatsApp send; app routes to the error screen when unset |
+| `EXPO_PUBLIC_LIVEKIT_AGENT_NAME` | No | `andora-voice-agent` | Name of the agent to contact |
+| `EXPO_PUBLIC_LIVEKIT_SANDBOX_ID` | No (legacy dev) | `abc123…` | LiveKit sandbox fallback only when no API URL is set |
+| `EXPO_PUBLIC_ANDORA_TOKEN_URL` | No (legacy dev) | `http://10.0.2.2:8000/token` | Legacy token URL fallback; prefer `EXPO_PUBLIC_ANDORA_API_URL` |
 
 > WhatsApp send needs a dev build (`npx expo run:android`), not Expo Go,
 > because `react-native-share` is a native module.
@@ -227,19 +240,27 @@ Never store private keys or release credentials in this file.
 Example `.env.local`:
 
 ```env
-EXPO_PUBLIC_ANDORA_TOKEN_URL=https://token.andora.id/api/token
+EXPO_PUBLIC_ANDORA_API_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_SUPABASE_URL=https://xyz.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi…
+EXPO_PUBLIC_ANDORA_LETTER_URL=http://10.0.2.2:8000/letters/surat.pdf
 EXPO_PUBLIC_LIVEKIT_AGENT_NAME=andora-voice-agent
-EXPO_PUBLIC_LIVEKIT_SANDBOX_ID=
-# Next phase — Supabase SSO:
-# EXPO_PUBLIC_SUPABASE_URL=
-# EXPO_PUBLIC_SUPABASE_ANON_KEY=
 ```
+
+Voice flow against andora-be (`POST /livekit/token` with
+`Authorization: Bearer <supabase_access_token>` and
+`{ "conversation_id": "..." }`): the app joins `room_name`
+(`andora-{conversation_id}`) with `server_url`/`participant_token` from the
+response, calls RPC `andora.mic.hold` on press / `andora.mic.release` on
+release to the worker participant identity, and reacts to
+`andora.turn.completed` (or `fetch_required` via `GET /conversations/{id}`),
+`andora.turn.ready` (including `empty_transcript`), and `andora.turn.failed`.
 
 Token source priority in `hooks/useConnection.tsx`:
 
-1. `EXPO_PUBLIC_ANDORA_TOKEN_URL` — the Andora token server,
-2. `EXPO_PUBLIC_LIVEKIT_SANDBOX_ID` — the sandbox token server,
-3. the LiveKit demo agent fallback (development only).
+1. `EXPO_PUBLIC_ANDORA_API_URL` — the andora-be backend (`POST /livekit/token`),
+2. `EXPO_PUBLIC_LIVEKIT_SANDBOX_ID` — the sandbox token server (dev only),
+3. an explicit error telling the user to configure the backend.
 
 ---
 
@@ -334,9 +355,9 @@ git push origin v1.0.0
 - Private keys only exist in GitHub Actions secrets, never in code.
 - Public keys (`EXPO_PUBLIC_*`, the Supabase anon key) may be used on the client;
   the `service_role` key **must never** ship in the app.
-- Current SSO behavior: the Google button goes straight to home until Supabase is
-  configured — do not treat it as real authentication until the TODO in
-  `app/auth/index.tsx` is connected.
+- Auth behavior: the Google button runs Supabase SSO and the splash screen only
+  routes to `/home` with a live session; every andora-be call sends
+  `Authorization: Bearer <supabase_access_token>`.
 
 ---
 
@@ -367,7 +388,8 @@ npx expo start -c
 
 - Grant microphone and camera permissions when prompted (see the permission list in `app.json`).
 - On Android 12 and later, make sure Bluetooth and audio permissions are not permanently denied.
-- Check `hooks/useConnection.tsx`: the token URL or sandbox ID must be set.
+- Check that `EXPO_PUBLIC_ANDORA_API_URL` points at a running andora-be and the
+  conversation exists; the assistant screen shows the exact token/RPC error.
 
 </details>
 
@@ -384,9 +406,9 @@ npx expo start -c
 
 ## Roadmap
 
-- [ ] Full Google SSO via Supabase (`signInWithOAuth`, deep links, persistent sessions).
+- [x] Full Google SSO via Supabase (`signInWithOAuth`, deep links, persistent sessions).
+- [x] Message history connected to andora-be instead of static examples.
 - [ ] Document details plus downloading and sharing letters from the document list.
-- [ ] Message history connected to a backend instead of static examples.
 - [ ] Offline mode and a letter sending queue.
 - [ ] End-to-end tests (Maestro/Detox) for splash, sign-in, home, and assistant.
 - [ ] Final icons and splash assets from Figma as versioned files.

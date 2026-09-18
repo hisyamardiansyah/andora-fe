@@ -1,28 +1,50 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
 import AgentAuraGL from '@/components/AgentAuraGL';
 import { useConnection } from '@/hooks/useConnection';
+import { useConversationList } from '@/hooks/useConversations';
+import { useSessionContext } from '@/hooks/useSession';
 import { useAgent } from '@livekit/components-react';
 
 // FIGMA Andora (Copy) 7IHCYJs2bVqT4uzuCJKzhF node 11-6 -> /home.
-// Dark brand screen, reminder card, mic CTA, Kirim Surat, bottom navbar.
+// Dark brand screen, reminder card, mic CTA, bottom navbar.
+// Reminder card shows the latest backend conversation when available.
 export default function HomeScreen() {
   const router = useRouter();
   const connection = useConnection();
+  const { accessToken } = useSessionContext();
+  const { items, loading } = useConversationList();
   // SessionProvider always supplies session context, so useAgent is safe here
   // even before connect (reports disconnected -> gentle idle pulse).
-  const { state: agentState } = useAgent();
+  const { state: agentState, microphoneTrack } = useAgent();
+  const latest = items[0];
 
-  // Navigate first so the transcript screen always appears;
-  // the LiveKit session connects in the background instead.
-  const startVoice = () => {
-    router.push('/assistant');
+  // Open (or reuse) a conversation, then join its andora-{id} voice room.
+  const startVoice = async (conversationId?: string) => {
+    if (conversationId) {
+      router.push({
+        pathname: '/assistant',
+        params: { conversationId, voice: '1' },
+      });
+    } else {
+      router.push('/assistant');
+    }
     try {
-      connection.connect();
+      await connection.connect({
+        conversationId,
+        accessToken: accessToken ?? undefined,
+      });
     } catch {
       // Assistant screen shows the offline state.
     }
@@ -46,33 +68,40 @@ export default function HomeScreen() {
             <Text style={styles.reminderTitle}>Pengingat Ramah</Text>
           </View>
           <View style={styles.reminderCard}>
-            <View style={styles.reminderTop}>
-              <View style={styles.reminderText}>
-                <Text style={styles.reminderHeading}>
-                  Laporan Surat Kehilangan Dompet
-                </Text>
+            {loading ? (
+              <View style={styles.reminderLoading}>
+                <ActivityIndicator size="small" color={Andora.colors.primary} />
+                <Text style={styles.reminderBody}>Memuat percakapan...</Text>
+              </View>
+            ) : latest ? (
+              <>
+                <View style={styles.reminderTop}>
+                  <View style={styles.reminderText}>
+                    <Text style={styles.reminderHeading}>{latest.title}</Text>
+                    {latest.last_message_preview ? (
+                      <Text style={styles.reminderBody} numberOfLines={2}>
+                        {latest.last_message_preview}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+                <View style={styles.reminderCtaRow}>
+                  <Pressable
+                    onPress={() => void startVoice(latest.id)}
+                    style={styles.reminderCta}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.reminderCtaText}>Lanjutkan Bicara</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <View style={styles.reminderLoading}>
                 <Text style={styles.reminderBody}>
-                  Tenggat: 12 Oktober 2026
+                  Belum ada percakapan. Tekan mic di bawah untuk mulai.
                 </Text>
               </View>
-              <View style={styles.reminderBadge}>
-                <Ionicons
-                  name="time-outline"
-                  size={20}
-                  color={Andora.colors.danger}
-                />
-                <Text style={styles.reminderBadgeText}>2 hari lagi</Text>
-              </View>
-            </View>
-            <View style={styles.reminderCtaRow}>
-              <Pressable
-                onPress={startVoice}
-                style={styles.reminderCta}
-                accessibilityRole="button"
-              >
-                <Text style={styles.reminderCtaText}>Kirim Surat</Text>
-              </Pressable>
-            </View>
+            )}
           </View>
         </View>
 
@@ -81,7 +110,7 @@ export default function HomeScreen() {
         </Text>
 
         <Pressable
-          onPressIn={startVoice}
+          onPressIn={() => void startVoice(latest?.id)}
           style={styles.micWrap}
           accessibilityRole="button"
           accessibilityLabel="Tekan untuk bicara"
@@ -92,6 +121,8 @@ export default function HomeScreen() {
             colorShift={0.3}
             state={agentState}
             themeMode="dark"
+            audioTrack={microphoneTrack ?? undefined}
+            micIconSize={38}
           />
           <Text style={styles.micLabel}>Tekan untuk bicara</Text>
         </Pressable>
@@ -154,20 +185,11 @@ const styles = StyleSheet.create({
     color: Andora.colors.primaryMuted,
     fontSize: Andora.typography.size.bodyLarge,
   },
-  reminderBadge: {
-    backgroundColor: Andora.colors.reminderBadge,
-    borderRadius: 8,
-    width: 98,
-    height: 28,
+  reminderLoading: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  reminderBadgeText: {
-    color: Andora.colors.danger,
-    fontSize: Andora.typography.size.body,
-    fontWeight: Andora.typography.weight.semibold,
+    gap: 8,
+    paddingVertical: 8,
   },
   reminderCtaRow: {
     paddingTop: 7,

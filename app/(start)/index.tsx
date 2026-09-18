@@ -2,18 +2,22 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Andora } from '@/constants/Andora';
+import { useSessionContext } from '@/hooks/useSession';
 
 // Figma file yguOf0BB6X0G6FBhAVPHb9 node 18-1034 -> Splash Screen.
 // Text-only: 50px title, 20px subtitle, by ORBIT footer.
+// Routes to /home only with a live Supabase session, else /auth.
 export default function StartScreen() {
   const router = useRouter();
+  const { session, loading } = useSessionContext();
 
   useEffect(() => {
+    if (loading) return;
     const timer = setTimeout(() => {
-      router.replace('/auth');
+      router.replace(session ? '/home' : '/auth');
     }, 1500);
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [router, loading, session]);
 
   return (
     <View style={styles.container}>

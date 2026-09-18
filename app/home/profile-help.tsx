@@ -10,17 +10,20 @@ const FAQS = [
   {
     id: '1',
     question: 'Bagaimana cara membuat surat baru?',
-    answer: 'Buka halaman Pesan, pilih Kebutuhan Baru, lalu ikuti panduan suara atau ketik kebutuhan Anda.',
+    answer:
+      'Buka halaman Pesan, pilih Kebutuhan Baru, lalu ikuti panduan suara atau ketik kebutuhan Anda.',
   },
   {
     id: '2',
     question: 'Apakah data saya aman?',
-    answer: 'Ya. Data Anda tersimpan aman dan hanya digunakan untuk memproses kebutuhan dokumen Anda.',
+    answer:
+      'Ya. Data Anda tersimpan aman dan hanya digunakan untuk memproses kebutuhan dokumen Anda.',
   },
   {
     id: '3',
     question: 'Bagaimana cara menghubungi bantuan?',
-    answer: 'Hubungi kami melalui email halo@andora.id atau telepon 1500-xxx setiap hari kerja.',
+    answer:
+      'Hubungi kami melalui email halo@andora.id atau telepon 1500-xxx setiap hari kerja.',
   },
 ] as const;
 
@@ -30,7 +33,10 @@ export default function ProfileHelpScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerRow}>
           <Pressable
             onPress={() => router.back()}
@@ -38,7 +44,11 @@ export default function ProfileHelpScreen() {
             accessibilityRole="button"
             accessibilityLabel="Kembali"
           >
-            <Ionicons name="chevron-back" size={24} color={Andora.colors.primary} />
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={Andora.colors.primary}
+            />
           </Pressable>
           <View style={styles.headerText}>
             <Text style={styles.title}>Bantuan & Akun</Text>
@@ -91,7 +101,11 @@ export default function ProfileHelpScreen() {
           </View>
         </View>
 
-        <Pressable style={styles.contactButton} accessibilityRole="button" onPress={() => {}}>
+        <Pressable
+          style={styles.contactButton}
+          accessibilityRole="button"
+          onPress={() => {}}
+        >
           <Text style={styles.contactText}>Hubungi Bantuan</Text>
         </Pressable>
       </ScrollView>
@@ -140,7 +154,11 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: Andora.spacing.sm,
   },
-  faqRow: { flexDirection: 'row', alignItems: 'center', gap: Andora.spacing.sm },
+  faqRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Andora.spacing.sm,
+  },
   iconCircle: {
     width: 48,
     height: 48,

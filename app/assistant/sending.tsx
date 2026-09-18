@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,13 +11,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import { downloadLetterPdf } from '@/lib/downloadLetterPdf';
-import { shareLetterToWhatsApp } from '@/lib/shareLetter';
+import { SHARE_CANCELLED_CODE, shareLetterToWhatsApp } from '@/lib/shareLetter';
+import { useSessionContext } from '@/hooks/useSession';
 
 // FIGMA Andora (Copy) yguOf0BB6X0G6FBhAVPHb9 node 48-237 -> /assistant/sending.
 // Real send: downloads the PDF from the backend, then shares to WhatsApp.
 // Requires a dev build (`npx expo run:android`); Expo Go will NOT work.
 export default function SendingScreen() {
   const router = useRouter();
+  const { title, recipient } = useLocalSearchParams<{
+    title?: string;
+    recipient?: string;
+  }>();
+  const { accessToken } = useSessionContext();
   const [status, setStatus] = useState('Menyiapkan dokumen...');
   const [hint, setHint] = useState('');
 
@@ -25,7 +31,9 @@ export default function SendingScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const uri = await downloadLetterPdf();
+        const uri = await downloadLetterPdf(undefined, {
+          accessToken: accessToken ?? undefined,
+        });
         if (cancelled) return;
         setStatus('Mengirim Dokumen...');
         await shareLetterToWhatsApp(uri);
@@ -33,14 +41,20 @@ export default function SendingScreen() {
         router.replace('/assistant/send-result?ok=1');
       } catch (error) {
         if (cancelled) return;
-        if (error instanceof Error && error.message) setHint(error.message);
+        if ((error as { code?: string })?.code === SHARE_CANCELLED_CODE) {
+          router.replace('/home');
+          return;
+        }
+        if (error instanceof Error && error.message) {
+          setHint(`Unduhan/pengiriman gagal: ${error.message}`);
+        }
         router.replace('/assistant/send-error');
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, accessToken]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -62,15 +76,19 @@ export default function SendingScreen() {
             size={38}
             color={Andora.colors.primary}
           />
-          <Text style={styles.cardTitle}>Surat keterangan tidak mampu</Text>
+          <Text style={styles.cardTitle}>
+            {typeof title === 'string' && title ? title : 'Surat Andora'}
+          </Text>
           <View style={styles.row}>
             <Text style={styles.label}>Pengiriman Via</Text>
             <Text style={styles.value}>WhatsApp</Text>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Kontak Penerima</Text>
-            <Text style={styles.value}>Akademik Fakultas Ilmu Budaya UGM</Text>
-          </View>
+          {typeof recipient === 'string' && recipient ? (
+            <View style={styles.row}>
+              <Text style={styles.label}>Kontak Penerima</Text>
+              <Text style={styles.value}>{recipient}</Text>
+            </View>
+          ) : null}
         </View>
         <Pressable
           onPress={() => router.back()}

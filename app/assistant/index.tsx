@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -11,14 +12,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AgentAuraGL from '@/components/AgentAuraGL';
 import { useConnection } from '@/hooks/useConnection';
+import { useConversationDetail } from '@/hooks/useConversations';
+import { useSessionContext } from '@/hooks/useSession';
+import { useVoiceTurn } from '@/hooks/useVoiceTurn';
 import {
   useAgent,
-  useChat,
   useConnectionState,
   useLocalParticipant,
   useMaybeRoomContext,
@@ -26,57 +29,13 @@ import {
 import { ConnectionState } from 'livekit-client';
 
 // FIGMA yguOf0BB6X0G6FBhAVPHb9 node 45-415 -> /assistant.
-// Transcript chat: home mic lands here, "Ya, Kirim Sekarang" -> /assistant/sending.
+// Transcript chat: opened with ?conversationId=<id> (&voice=1 to auto-join).
+// Text goes through POST /conversations/{id}/messages; voice uses the
+// andora-be LiveKit worker (RPC hold/release + andora.turn.* events).
 type ChatItem =
   | { kind: 'andora'; id: string; text: string }
   | { kind: 'user'; id: string; text: string }
-  | { kind: 'doc'; id: string }
-  | { kind: 'ctas'; id: string };
-
-const SEED: ChatItem[] = [
-  { kind: 'andora', id: 'a1', text: 'Silakan deskripsikan kebutuhan dokumen anda' },
-  {
-    kind: 'andora',
-    id: 'a2',
-    text: 'Baik, Andora akan membuatkan pemohonan Surat Keterangan Tidak Mampu. Saya ingin memastikan, Apakah tujuan keperluan surat ini untuk kuliah atau kegiatan lainnya?',
-  },
-  { kind: 'user', id: 'u1', text: 'Untuk keperluan kuliah' },
-  { kind: 'andora', id: 'a3', text: 'Kapan surat ini akan digunakan?' },
-  { kind: 'user', id: 'u2', text: 'Tanggal 22 September 2026' },
-  {
-    kind: 'andora',
-    id: 'a4',
-    text: 'Selanjutnya, untuk melengkapi data Anda, silakan jawab beberapa pertanyaan berikut: Pertama, sebutkan nama lengkap pemohon atau penanggung jawab keluarga.',
-  },
-  { kind: 'user', id: 'u3', text: 'Nama lengkap saya Zoe Atasya Nahaya.' },
-  {
-    kind: 'andora',
-    id: 'a5',
-    text: 'Lalu, sebutkan Nomor Induk Kependudukan (NIK) dan Nomor Kartu Keluarga (KK) Anda.',
-  },
-  {
-    kind: 'user',
-    id: 'u4',
-    text: 'NIK saya 167115644256 dan Nomor KK saya 167118901',
-  },
-  {
-    kind: 'andora',
-    id: 'a6',
-    text: 'Silakan buka dan cek dokumen. Jika sudah sesuai, Anda bisa memberi Andora perintah untuk mengirim dokumen tersebut.',
-  },
-  { kind: 'doc', id: 'doc1' },
-  {
-    kind: 'user',
-    id: 'u5',
-    text: 'Baik sekali, sudah sesuai! Sekarang tolong kirimkan melalui WhatsApp ke kontak Akademik Fakultas Ilmu Budaya UGM di WA saya',
-  },
-  {
-    kind: 'andora',
-    id: 'a7',
-    text: 'Baik, saya akan mengirim surat ini melalui WhatsApp. Tujuannya ke kontak Akademik Fakultas Ilmu Budaya UGM. Apakah Anda yakin ingin mengirim sekarang?',
-  },
-  { kind: 'ctas', id: 'ctas1' },
-];
+  | { kind: 'notice'; id: string; text: string };
 
 // LiveKit ConnectionState -> Indonesian status label.
 const connectionStatusText: Record<string, string> = {
@@ -87,52 +46,137 @@ const connectionStatusText: Record<string, string> = {
   [ConnectionState.Disconnected]: 'Terputus',
 };
 
+const voiceStatusText: Record<string, string> = {
+  recording: 'Merekam... lepaskan untuk selesai',
+  processing: 'Andora sedang menjawab...',
+  ready: 'Siap. Tekan untuk bicara lagi.',
+  failed: 'Suara gagal diproses. Coba lagi.',
+};
+
 export default function AssistantChatScreen() {
   const router = useRouter();
+  const { conversationId, voice } = useLocalSearchParams<{
+    conversationId?: string;
+    voice?: string;
+  }>();
   const connection = useConnection();
+  const { accessToken } = useSessionContext();
   const room = useMaybeRoomContext();
   // Resolved via SessionProvider room; every use below guards the offline state.
-  const { send, chatMessages } = useChat();
   const connectionState = useConnectionState();
   const { localParticipant } = useLocalParticipant();
   // SessionProvider always supplies session context, so useAgent is safe here
   // even when offline (reports disconnected -> gentle idle pulse).
   const { state: agentState, microphoneTrack } = useAgent();
-  const [items, setItems] = useState<ChatItem[]>(SEED);
+  const {
+    detail,
+    loading: detailLoading,
+    error: detailError,
+    sending,
+    send,
+    refresh,
+  } = useConversationDetail(
+    typeof conversationId === 'string' ? conversationId : null
+  );
+  const [localItems, setLocalItems] = useState<ChatItem[]>([]);
   const [draft, setDraft] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
-  const seenChatIds = useRef<Set<string>>(new Set());
+  const autoJoinedRef = useRef(false);
+
+  const {
+    status: voiceStatus,
+    holdToTalk,
+    releaseToSend,
+  } = useVoiceTurn(room, {
+    onUserMessage: (msg) => {
+      setLocalItems((prev) =>
+        prev.some((i) => i.id === msg.id)
+          ? prev
+          : [...prev, { kind: 'user', id: msg.id, text: msg.content }]
+      );
+    },
+    onAssistantMessage: (msg) => {
+      setLocalItems((prev) =>
+        prev.some((i) => i.id === msg.id)
+          ? prev
+          : [...prev, { kind: 'andora', id: msg.id, text: msg.content }]
+      );
+      void refresh();
+    },
+    onFetchRequired: () => {
+      void refresh();
+    },
+    onReady: (_id, reason) => {
+      if (reason !== 'empty_transcript') void refresh();
+    },
+    onFailed: () => {
+      setLocalItems((prev) => [
+        ...prev,
+        {
+          kind: 'andora',
+          id: `voice-failed-${Date.now()}`,
+          text: 'Suara gagal diproses. Silakan coba lagi.',
+        },
+      ]);
+    },
+  });
 
   const isConnected = connectionState === ConnectionState.Connected;
+  const isRecording = voiceStatus === 'recording';
+  const isProcessing =
+    voiceStatus === 'processing' || voiceStatus === 'recording';
 
-  // Append unseen LiveKit messages below the SEED transcript.
+  // Auto-join the andora-{id} voice room when opened with ?voice=1.
   useEffect(() => {
-    const unseen = chatMessages.filter((m) => !seenChatIds.current.has(m.id));
-    if (unseen.length === 0) return;
-    for (const m of unseen) seenChatIds.current.add(m.id);
-    setItems((prev) => [
-      ...prev,
-      ...unseen.map(
-        (m): ChatItem => ({
-          kind: m.from?.isLocal ? 'user' : 'andora',
-          id: `live-${m.id}`,
-          text: m.message,
+    if (
+      voice === '1' &&
+      typeof conversationId === 'string' &&
+      conversationId &&
+      !autoJoinedRef.current
+    ) {
+      autoJoinedRef.current = true;
+      connection
+        .connect({
+          conversationId,
+          accessToken: accessToken ?? undefined,
         })
-      ),
-    ]);
-  }, [chatMessages]);
+        .catch((e: unknown) => {
+          setVoiceError(e instanceof Error ? e.message : String(e));
+        });
+    }
+  }, [voice, conversationId, accessToken, connection]);
+
+  const items: ChatItem[] = [
+    ...(detail?.messages.map(
+      (m): ChatItem => ({
+        kind: m.role === 'user' ? 'user' : 'andora',
+        id: m.id,
+        text: m.content,
+      })
+    ) ?? []),
+    // Local-only rows (optimistic text, voice events) not yet in the
+    // canonical detail; drop any whose id already arrived via refresh.
+    ...localItems.filter(
+      (i) => !(detail?.messages.some((m) => m.id === i.id) ?? false)
+    ),
+  ];
 
   const sendDraft = async () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || !conversationId || sending) return;
     setDraft('');
-    setItems((prev) => [...prev, { kind: 'user', id: `user-${Date.now()}`, text }]);
-    if (!room || !isConnected) return;
+    const optimisticId = `user-${Date.now()}`;
+    setLocalItems((prev) => [
+      ...prev,
+      { kind: 'user', id: optimisticId, text },
+    ]);
     try {
+      // The hook appends the returned turn to the canonical detail state.
       await send(text);
+      setLocalItems((prev) => prev.filter((i) => i.id !== optimisticId));
     } catch {
-      setItems((prev) => [
+      setLocalItems((prev) => [
         ...prev,
         {
           kind: 'andora',
@@ -152,21 +196,36 @@ export default function AssistantChatScreen() {
     router.back();
   };
 
-  const handleMicIn = () => {
-    setIsRecording(true);
+  const handleMicIn = async () => {
+    setVoiceError(null);
     try {
-      void localParticipant?.setMicrophoneEnabled(true);
+      await localParticipant?.setMicrophoneEnabled(true);
     } catch {
-      // Offline: visual hold-to-talk only.
+      // Track publish failed; RPC below will surface the error.
+    }
+    try {
+      await holdToTalk();
+    } catch (e) {
+      try {
+        await localParticipant?.setMicrophoneEnabled(false);
+      } catch {
+        // Best effort cleanup.
+      }
+      setVoiceError(e instanceof Error ? e.message : String(e));
     }
   };
 
-  const handleMicOut = () => {
-    setIsRecording(false);
+  const handleMicOut = async () => {
     try {
-      void localParticipant?.setMicrophoneEnabled(false);
-    } catch {
-      // Offline: visual hold-to-talk only.
+      await releaseToSend();
+    } catch (e) {
+      setVoiceError(e instanceof Error ? e.message : String(e));
+    } finally {
+      try {
+        await localParticipant?.setMicrophoneEnabled(false);
+      } catch {
+        // Best effort cleanup.
+      }
     }
   };
 
@@ -193,9 +252,11 @@ export default function AssistantChatScreen() {
       {!isConnected ? (
         <View style={styles.statusBanner}>
           <Text style={styles.statusText}>
-            {!room
-              ? 'Mode offline — pesan tersimpan lokal'
-              : (connectionStatusText[connectionState] ?? 'Terputus')}
+            {connection.connectError
+              ? `Suara: ${connection.connectError}`
+              : !room
+              ? 'Mode offline — kirim pesan teks tetap tersimpan ke backend'
+              : connectionStatusText[connectionState] ?? 'Terputus'}
           </Text>
         </View>
       ) : null}
@@ -205,9 +266,40 @@ export default function AssistantChatScreen() {
         style={styles.transcript}
         contentContainerStyle={styles.transcriptContent}
         showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() =>
+          scrollRef.current?.scrollToEnd({ animated: true })
+        }
       >
+        {!conversationId || typeof conversationId !== 'string' ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>
+              Pilih percakapan dari tab Pesan untuk mulai.
+            </Text>
+          </View>
+        ) : detailLoading && items.length === 0 ? (
+          <View style={styles.stateBox}>
+            <ActivityIndicator size="small" color={Andora.colors.primary} />
+            <Text style={styles.stateText}>Memuat percakapan...</Text>
+          </View>
+        ) : detailError && items.length === 0 ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>Gagal memuat: {detailError}</Text>
+          </View>
+        ) : items.length === 0 ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>
+              Belum ada pesan. Ketik di bawah atau tekan mic untuk bicara.
+            </Text>
+          </View>
+        ) : null}
         {items.map((item) => {
+          if (item.kind === 'notice') {
+            return (
+              <View key={item.id} style={styles.stateBox}>
+                <Text style={styles.stateText}>{item.text}</Text>
+              </View>
+            );
+          }
           if (item.kind === 'andora') {
             return (
               <View key={item.id} style={styles.andoraRow}>
@@ -224,57 +316,27 @@ export default function AssistantChatScreen() {
               </View>
             );
           }
-          if (item.kind === 'user') {
-            return (
-              <View key={item.id} style={styles.userRow}>
-                <View style={styles.userBubble}>
-                  <Text style={styles.userText}>{item.text}</Text>
-                </View>
-              </View>
-            );
-          }
-          if (item.kind === 'doc') {
-            return (
-              <View key={item.id} style={styles.docCard}>
-                <View style={styles.docTop}>
-                  <Ionicons
-                    name="document-text"
-                    size={66}
-                    color={Andora.colors.primary}
-                  />
-                  <Text style={styles.docTitle}>Surat keterangan tidak mampu</Text>
-                </View>
-                <View style={styles.docRows}>
-                  <Text style={styles.docLabel}>Penerima Tujuan</Text>
-                  <Text style={styles.docValue}>
-                    Akademik Fakultas Ilmu Budaya UGM
-                  </Text>
-                </View>
-                <Text style={styles.docOpen}>Buka</Text>
-              </View>
-            );
-          }
           return (
-            <View key={item.id} style={styles.ctaBlock}>
-              <Pressable
-                onPress={() => router.push('/assistant/sending')}
-                style={styles.primaryCta}
-                accessibilityRole="button"
-              >
-                <Text style={styles.primaryCtaText}>Ya, Kirim Sekarang</Text>
-              </Pressable>
-              <Pressable
-                onPress={handleBack}
-                style={styles.secondaryCta}
-                accessibilityRole="button"
-              >
-                <Text style={styles.secondaryCtaText}>
-                  Nanti saja/Simpan sebagai draf
-                </Text>
-              </Pressable>
+            <View key={item.id} style={styles.userRow}>
+              <View style={styles.userBubble}>
+                <Text style={styles.userText}>{item.text}</Text>
+              </View>
             </View>
           );
         })}
+        {isProcessing ? (
+          <View style={styles.stateBox}>
+            <ActivityIndicator size="small" color={Andora.colors.primary} />
+            <Text style={styles.stateText}>
+              {voiceStatusText[voiceStatus] ?? 'Andora sedang menjawab...'}
+            </Text>
+          </View>
+        ) : null}
+        {voiceError ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>Suara: {voiceError}</Text>
+          </View>
+        ) : null}
       </ScrollView>
 
       <KeyboardAvoidingView
@@ -323,7 +385,9 @@ export default function AssistantChatScreen() {
               Tekan untuk bicara, Lepas untuk selesai
             </Text>
             {isRecording ? (
-              <Text style={styles.recordingHint}>Merekam... lepaskan untuk selesai</Text>
+              <Text style={styles.recordingHint}>
+                Merekam... lepaskan untuk selesai
+              </Text>
             ) : null}
           </Pressable>
         </View>
@@ -454,36 +518,20 @@ const styles = StyleSheet.create({
     fontWeight: Andora.typography.weight.semibold,
     textAlign: 'right',
   },
-  ctaBlock: { gap: Andora.spacing.sm, alignItems: 'center' },
-  primaryCta: {
-    width: '100%',
-    maxWidth: 380,
-    height: 55,
-    borderRadius: 20,
-    backgroundColor: Andora.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryCtaText: {
-    color: Andora.colors.onPrimary,
-    fontSize: Andora.typography.size.title,
-    fontWeight: Andora.typography.weight.bold,
-  },
-  secondaryCta: {
-    width: '100%',
-    maxWidth: 380,
-    height: 55,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Andora.colors.borderStrong,
+  stateBox: {
     backgroundColor: Andora.colors.surface,
+    borderWidth: 1,
+    borderColor: Andora.colors.border,
+    borderRadius: 10,
+    padding: Andora.spacing.sm,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
   },
-  secondaryCtaText: {
-    color: Andora.colors.primary,
-    fontSize: Andora.typography.size.title,
+  stateText: {
+    color: Andora.colors.textMuted,
+    fontSize: Andora.typography.size.body,
     fontWeight: Andora.typography.weight.semibold,
+    textAlign: 'center',
   },
   composer: {
     backgroundColor: Andora.colors.surface,

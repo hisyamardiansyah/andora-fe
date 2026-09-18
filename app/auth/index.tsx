@@ -1,22 +1,47 @@
 import { useRouter } from 'expo-router';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
+import { SESSION_CANCELLED_CODE, useSessionContext } from '@/hooks/useSession';
 
 // Login screen matching Figma node 87-675 ("Profile"). Illustration and
 // Google G mark are PNGs exported from that node; doc/status glyphs use Ionicons.
 export default function AuthScreen() {
   const router = useRouter();
+  const { session, loading, configured, signInWithGoogle } =
+    useSessionContext();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // TODO: wire to supabase.auth.signInWithOAuth({ provider: 'google' }) when configured.
-  const supabaseConfigured = false;
-
-  const handleGoogleSignIn = () => {
-    if (supabaseConfigured) {
-      return;
+  useEffect(() => {
+    if (!loading && session) {
+      router.replace('/home');
     }
-    router.replace('/home');
+  }, [loading, session, router]);
+
+  const handleGoogleSignIn = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code !== SESSION_CANCELLED_CODE && e instanceof Error) {
+        setError(e.message);
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -52,16 +77,17 @@ export default function AuthScreen() {
         <View style={styles.welcome}>
           <Text style={styles.welcomeTitle}>Selamat Datang di Andora!</Text>
           <Text style={styles.welcomeBody}>
-            Dapatkan bantuan untuk memahami, membuat, dan mengirimkan dokumen administrasi dengan
-            lebih mudah
+            Dapatkan bantuan untuk memahami, membuat, dan mengirimkan dokumen
+            administrasi dengan lebih mudah
           </Text>
         </View>
 
         <TouchableOpacity
           onPress={handleGoogleSignIn}
           activeOpacity={0.85}
-          style={styles.googleButton}
+          style={[styles.googleButton, busy ? styles.googleButtonBusy : null]}
           accessibilityRole="button"
+          disabled={busy || loading}
         >
           <Image
             style={styles.googleIcon}
@@ -69,13 +95,32 @@ export default function AuthScreen() {
             resizeMode="contain"
             accessibilityLabel="Google logo"
           />
-          <Text style={styles.googleText}>Lanjutkan dengan akun google</Text>
+          <Text style={styles.googleText}>
+            {busy
+              ? 'Menghubungkan...'
+              : loading
+              ? 'Memeriksa sesi...'
+              : 'Lanjutkan dengan akun google'}
+          </Text>
         </TouchableOpacity>
+        {error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : !configured ? (
+          <Text style={styles.errorText}>
+            Login Google butuh EXPO_PUBLIC_SUPABASE_URL dan
+            EXPO_PUBLIC_SUPABASE_ANON_KEY.
+          </Text>
+        ) : null}
 
         <View style={styles.privacyRow}>
-          <Ionicons name="lock-closed" size={24} color={Andora.colors.textMuted2} />
+          <Ionicons
+            name="lock-closed"
+            size={24}
+            color={Andora.colors.textMuted2}
+          />
           <Text style={styles.privacyText}>
-            Dengan melanjutkan, Anda menyetujui kebijakan privasi dan keamanan Andora
+            Dengan melanjutkan, Anda menyetujui kebijakan privasi dan keamanan
+            Andora
           </Text>
         </View>
       </ScrollView>
@@ -111,7 +156,13 @@ const styles = StyleSheet.create({
   },
   illustrationWrap: { marginTop: 24, alignItems: 'center' },
   illustration: { width: 232, height: 226 },
-  welcome: { width: 370, maxWidth: '100%', marginTop: 40, alignItems: 'center', gap: 4 },
+  welcome: {
+    width: 370,
+    maxWidth: '100%',
+    marginTop: 40,
+    alignItems: 'center',
+    gap: 4,
+  },
   welcomeTitle: {
     color: Andora.colors.primaryMuted,
     fontSize: Andora.typography.size.title,
@@ -141,6 +192,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   googleIcon: { width: 21, height: 21 },
+  googleButtonBusy: { opacity: 0.6 },
+  errorText: {
+    marginTop: 12,
+    color: Andora.colors.danger,
+    fontSize: Andora.typography.size.body,
+    fontWeight: Andora.typography.weight.semibold,
+    textAlign: 'center',
+  },
   googleText: {
     color: Andora.colors.onPrimary,
     fontSize: Andora.typography.size.title,

@@ -1,22 +1,51 @@
-import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import { useSessionContext } from '@/hooks/useSession';
 
 export default function ProfilePersonalScreen() {
   const router = useRouter();
-  const [name, setName] = useState('Adib Naziri');
-  const [email, setEmail] = useState('adib.naziri@email.com');
-  const [phone, setPhone] = useState('0812-3456-7890');
-  const [address, setAddress] = useState('Jl. Merdeka No. 1, Jakarta');
+  const { user } = useSessionContext();
+  const sessionName =
+    (typeof user?.user_metadata?.full_name === 'string' &&
+      user.user_metadata.full_name) ||
+    (typeof user?.user_metadata?.name === 'string' &&
+      user.user_metadata.name) ||
+    '';
+  const [name, setName] = useState(sessionName);
+  const [email, setEmail] = useState(user?.email ?? '');
+  const [phone, setPhone] = useState(
+    typeof user?.user_metadata?.phone === 'string'
+      ? user.user_metadata.phone
+      : ''
+  );
+  const [address, setAddress] = useState('');
   const [saved, setSaved] = useState(false);
+
+  // Sync once the session user resolves (initial render may be anonymous).
+  useEffect(() => {
+    if (sessionName) setName((prev) => prev || sessionName);
+    if (user?.email) setEmail((prev) => prev || (user.email ?? ''));
+  }, [sessionName, user]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerRow}>
           <Pressable
             onPress={() => router.back()}
@@ -24,7 +53,11 @@ export default function ProfilePersonalScreen() {
             accessibilityRole="button"
             accessibilityLabel="Kembali"
           >
-            <Ionicons name="chevron-back" size={24} color={Andora.colors.primary} />
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={Andora.colors.primary}
+            />
           </Pressable>
           <View style={styles.headerText}>
             <Text style={styles.title}>Informasi Pribadi</Text>
@@ -45,7 +78,12 @@ export default function ProfilePersonalScreen() {
 
         <View style={styles.form}>
           <Text style={styles.label}>Nama Lengkap</Text>
-          <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="Nama Lengkap" />
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+            placeholder="Nama Lengkap"
+          />
           <Text style={styles.label}>Email</Text>
           <TextInput
             value={email}
@@ -64,7 +102,12 @@ export default function ProfilePersonalScreen() {
             keyboardType="phone-pad"
           />
           <Text style={styles.label}>Alamat</Text>
-          <TextInput value={address} onChangeText={setAddress} style={styles.input} placeholder="Alamat" />
+          <TextInput
+            value={address}
+            onChangeText={setAddress}
+            style={styles.input}
+            placeholder="Alamat"
+          />
         </View>
 
         <Pressable
@@ -111,7 +154,11 @@ const styles = StyleSheet.create({
     fontSize: Andora.typography.size.bodyLarge,
     fontWeight: Andora.typography.weight.semibold,
   },
-  avatarBlock: { alignItems: 'center', marginBottom: Andora.spacing.md, position: 'relative' },
+  avatarBlock: {
+    alignItems: 'center',
+    marginBottom: Andora.spacing.md,
+    position: 'relative',
+  },
   avatar: { width: 80, height: 80, borderRadius: 40 },
   cameraBadge: {
     position: 'absolute',

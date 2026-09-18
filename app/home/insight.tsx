@@ -1,36 +1,25 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import { useConversationList } from '@/hooks/useConversations';
+import { useSessionContext } from '@/hooks/useSession';
 
-// Document list only: header + doc cards -> /assistant. No chat, no input bar.
-const DOCS = [
-  {
-    id: '1',
-    title: 'Surat Keterangan Tidak Mampu',
-    meta: '12 Oktober 2026 • Siap kirim',
-  },
-  {
-    id: '2',
-    title: 'Surat Keterangan Domisili',
-    meta: '10 Oktober 2026 • Siap kirim',
-  },
-  {
-    id: '3',
-    title: 'Surat Pengantar KTP',
-    meta: '8 Oktober 2026 • Siap kirim',
-  },
-  {
-    id: '4',
-    title: 'Laporan Surat Kehilangan Dompet',
-    meta: '5 Oktober 2026 • Siap kirim',
-  },
-] as const;
-
+// Document list: cards come from GET /conversations (latest first).
+// Tapping a card opens its transcript in /assistant.
 export default function InsightScreen() {
   const router = useRouter();
+  const { accessToken } = useSessionContext();
+  const { items, loading, error } = useConversationList();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -41,30 +30,62 @@ export default function InsightScreen() {
         <Text style={styles.title}>Dokumen</Text>
         <Text style={styles.subtitle}>Surat siap kirim</Text>
 
-        {DOCS.map((doc) => (
-          <Pressable
-            key={doc.id}
-            onPress={() => router.push('/assistant')}
-            style={styles.card}
-            accessibilityRole="button"
-          >
-            <Ionicons
-              name="document-text"
-              size={40}
-              color={Andora.colors.primary}
-            />
-            <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>{doc.title}</Text>
-              <Text style={styles.cardMeta}>{doc.meta}</Text>
-              <Text style={styles.openText}>Buka</Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={24}
-              color={Andora.colors.primaryMuted}
-            />
-          </Pressable>
-        ))}
+        {loading ? (
+          <View style={styles.stateBox}>
+            <ActivityIndicator size="small" color={Andora.colors.primary} />
+            <Text style={styles.stateText}>Memuat dokumen...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>Gagal memuat: {error}</Text>
+          </View>
+        ) : !accessToken ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>
+              Masuk dulu untuk melihat dokumen Anda.
+            </Text>
+          </View>
+        ) : items.length === 0 ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>
+              Belum ada dokumen. Mulai percakapan baru dari tab Pesan.
+            </Text>
+          </View>
+        ) : (
+          items.map((doc) => (
+            <Pressable
+              key={doc.id}
+              onPress={() =>
+                router.push({
+                  pathname: '/assistant',
+                  params: { conversationId: doc.id },
+                })
+              }
+              style={styles.card}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="document-text"
+                size={40}
+                color={Andora.colors.primary}
+              />
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>{doc.title}</Text>
+                {doc.last_message_preview ? (
+                  <Text style={styles.cardMeta} numberOfLines={2}>
+                    {doc.last_message_preview}
+                  </Text>
+                ) : null}
+                <Text style={styles.openText}>Buka</Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={24}
+                color={Andora.colors.primaryMuted}
+              />
+            </Pressable>
+          ))
+        )}
       </ScrollView>
       <AndoraNavbar />
     </SafeAreaView>
@@ -111,5 +132,19 @@ const styles = StyleSheet.create({
     fontSize: Andora.typography.size.body,
     fontWeight: Andora.typography.weight.semibold,
     textAlign: 'right',
+  },
+  stateBox: {
+    backgroundColor: Andora.colors.surface,
+    borderWidth: 1,
+    borderColor: Andora.colors.border,
+    borderRadius: 10,
+    padding: Andora.spacing.md,
+    alignItems: 'center',
+    gap: 8,
+  },
+  stateText: {
+    color: Andora.colors.textMuted,
+    fontSize: Andora.typography.size.body,
+    textAlign: 'center',
   },
 });

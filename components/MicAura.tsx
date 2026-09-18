@@ -11,6 +11,12 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import {
+  AURA_DEFAULT_COLOR,
+  brightnessForVolume,
+  clamp01,
+  targetsForState,
+} from '@/lib/agentAura';
 
 export type MicAuraState = AgentState | 'idle-local';
 
@@ -20,6 +26,8 @@ type MicAuraProps = {
   ringColor?: string;
   glowColor?: string;
   state?: MicAuraState;
+  themeMode?: 'dark' | 'light';
+  volume?: number;
   showMicIcon?: boolean;
   micIconSize?: number;
   style?: StyleProp<ViewStyle>;
@@ -31,33 +39,47 @@ const ACTIVE_STATES: ReadonlySet<string> = new Set([
   'listening',
 ]);
 
-// One expanding ring that fades as it grows; two of these phase-shifted
-// create the continuous aura ripple.
-function RippleRing({
-  progress,
-  phase,
+// One turbulent energy lobe: a large soft blob offset from center that
+// breathes and rotates around the core, so overlapping lobes read as one
+// continuous pulsing aura field rather than concentric rings.
+function AuraLobe({
+  breathe,
   size,
   color,
-  maxOpacity,
+  angle,
+  distance,
+  scaleBase,
+  scaleGain,
+  opacity,
 }: {
-  progress: SharedValue<number>;
-  phase: number;
+  breathe: SharedValue<number>;
   size: number;
   color: string;
-  maxOpacity: number;
+  angle: number;
+  distance: number;
+  scaleBase: number;
+  scaleGain: number;
+  opacity: number;
 }) {
-  const style = useAnimatedStyle(() => {
-    const t = (progress.value + phase) % 1;
-    return {
-      transform: [{ scale: 0.65 + t * 0.55 }],
-      opacity: maxOpacity * (1 - t),
-    };
-  });
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: Math.cos(angle) * distance },
+      { translateY: Math.sin(angle) * distance },
+      { scale: scaleBase + breathe.value * scaleGain },
+      { rotate: `${angle + breathe.value * 0.6}rad` },
+    ],
+    opacity,
+  }));
   return (
     <Animated.View
       style={[
-        styles.ripple,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
+        styles.lobe,
+        {
+          width: size,
+          height: size * 0.82,
+          borderRadius: size / 2,
+          backgroundColor: color,
+        },
         style,
       ]}
     />
@@ -66,19 +88,35 @@ function RippleRing({
 
 export default function MicAura({
   size = 197,
-  color = '#1f5fa8',
-  ringColor = '#9fc3e0',
+  color = AURA_DEFAULT_COLOR,
+  ringColor,
   glowColor,
   state = 'idle-local',
+  themeMode = 'dark',
+  volume = 0,
   showMicIcon = true,
   micIconSize,
   style,
 }: MicAuraProps) {
-  const middle = size * 0.86;
-  const inner = size * 0.46;
-  const iconSize = micIconSize ?? Math.round(inner * 0.42);
-  const active = ACTIVE_STATES.has(state);
+  const targets = targetsForState(state);
+  const level = clamp01(volume);
+  const active =
+    ACTIVE_STATES.has(state) ||
+    state === 'pre-connect-buffering' ||
+    level > 0.02;
   const auraColor = glowColor ?? color;
+  const haloColor = ringColor ?? auraColor;
+  const dim = themeMode === 'light';
+  const field = size;
+  const lobe = size * (0.52 + level * 0.22);
+  const haloDiameter = size * (0.72 + level * 0.16);
+  const haloWidth = Math.max(2, size * 0.02);
+  const badge = Math.round(size * 0.3);
+  const iconSize = micIconSize ?? Math.round(badge * 0.5);
+  const basePulse = targets.pulse?.[0] ?? targets.brightness;
+  const liveBrightness = brightnessForVolume(basePulse, level);
+  const lobeBase = (dim ? 0.16 : 0.24) + level * 0.2;
+  const haloBase = (active ? 0.5 : 0.28) * (dim ? 0.8 : 1);
 
   const breathe = useSharedValue(0);
   const ripple = useSharedValue(0);
@@ -94,7 +132,14 @@ export default function MicAura({
     );
     ripple.value = withRepeat(
       withTiming(1, {
-        duration: active ? 1600 : 2800,
+        duration:
+          targets.speed >= 70
+            ? 900
+            : targets.speed >= 30
+            ? 1600
+            : targets.speed >= 20
+            ? 2000
+            : 2800,
         easing: Easing.out(Easing.ease),
       }),
       -1,
@@ -104,15 +149,24 @@ export default function MicAura({
       cancelAnimation(breathe);
       cancelAnimation(ripple);
     };
-  }, [active, breathe, ripple]);
+  }, [active, targets.speed, breathe, ripple]);
 
-  const glowStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + breathe.value * (active ? 0.1 : 0.05) }],
-    opacity: active ? 0.22 + breathe.value * 0.14 : 0.1 + breathe.value * 0.08,
+  const fieldStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + breathe.value * (0.03 + level * 0.08) }],
+    opacity: Math.min(
+      0.5,
+      Math.max(0.06, lobeBase + breathe.value * (0.05 + level * 0.1))
+    ),
   }));
 
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + breathe.value * (active ? 0.08 : 0.03) }],
+  const haloStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 0.9 + ripple.value * 0.25 + level * 0.05 }],
+    opacity: Math.max(0, haloBase * (1 - ripple.value)),
+  }));
+
+  const badgeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + breathe.value * (0.02 + level * 0.06) }],
+    opacity: Math.min(1, 0.92 + liveBrightness * 0.02),
   }));
 
   return (
@@ -122,42 +176,74 @@ export default function MicAura({
     >
       <Animated.View
         style={[
-          styles.glow,
-          { width: size, height: size, borderRadius: size / 2, backgroundColor: auraColor },
-          glowStyle,
+          styles.field,
+          {
+            width: field,
+            height: field,
+            borderRadius: field / 2,
+            backgroundColor: auraColor,
+          },
+          fieldStyle,
         ]}
       />
-      <RippleRing
-        progress={ripple}
-        phase={0}
-        size={size}
+      <AuraLobe
+        breathe={breathe}
+        size={lobe}
         color={auraColor}
-        maxOpacity={active ? 0.35 : 0.18}
+        angle={0.4}
+        distance={size * 0.1}
+        scaleBase={0.9}
+        scaleGain={0.22 + level * 0.18}
+        opacity={Math.min(0.5, lobeBase + 0.08)}
       />
-      <RippleRing
-        progress={ripple}
-        phase={0.5}
-        size={size}
+      <AuraLobe
+        breathe={breathe}
+        size={lobe * 0.9}
         color={auraColor}
-        maxOpacity={active ? 0.35 : 0.18}
+        angle={2.5}
+        distance={size * 0.11}
+        scaleBase={0.95}
+        scaleGain={0.2 + level * 0.16}
+        opacity={Math.min(0.5, lobeBase + 0.04)}
+      />
+      <AuraLobe
+        breathe={breathe}
+        size={lobe * 0.8}
+        color={auraColor}
+        angle={4.4}
+        distance={size * 0.09}
+        scaleBase={0.9}
+        scaleGain={0.18 + level * 0.14}
+        opacity={Math.min(0.45, lobeBase)}
       />
       <Animated.View
         style={[
-          styles.ring,
-          { width: middle, height: middle, borderRadius: middle / 2, backgroundColor: ringColor },
-          ringStyle,
+          styles.halo,
+          {
+            width: haloDiameter,
+            height: haloDiameter,
+            borderRadius: haloDiameter / 2,
+            borderColor: haloColor,
+            borderWidth: haloWidth,
+          },
+          haloStyle,
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.badge,
+          {
+            width: badge,
+            height: badge,
+            borderRadius: badge / 2,
+            backgroundColor: color,
+          },
+          badgeStyle,
         ]}
       >
-        <View
-          style={[
-            styles.core,
-            { width: inner, height: inner, borderRadius: inner / 2, backgroundColor: color },
-          ]}
-        >
-          {showMicIcon ? (
-            <Ionicons name="mic" size={iconSize} color="#FFFFFF" />
-          ) : null}
-        </View>
+        {showMicIcon ? (
+          <Ionicons name="mic" size={iconSize} color="#FFFFFF" />
+        ) : null}
       </Animated.View>
     </View>
   );
@@ -168,17 +254,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  glow: {
+  field: {
     position: 'absolute',
   },
-  ripple: {
+  lobe: {
     position: 'absolute',
   },
-  ring: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  halo: {
+    position: 'absolute',
+    backgroundColor: 'transparent',
   },
-  core: {
+  badge: {
     alignItems: 'center',
     justifyContent: 'center',
   },

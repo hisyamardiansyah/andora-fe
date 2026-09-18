@@ -1,4 +1,11 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +17,10 @@ export default function ProfileAboutScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerRow}>
           <Pressable
             onPress={() => router.back()}
@@ -18,11 +28,17 @@ export default function ProfileAboutScreen() {
             accessibilityRole="button"
             accessibilityLabel="Kembali"
           >
-            <Ionicons name="chevron-back" size={24} color={Andora.colors.primary} />
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={Andora.colors.primary}
+            />
           </Pressable>
           <View style={styles.headerText}>
             <Text style={styles.title}>Tentang Andora</Text>
-            <Text style={styles.subtitle}>Versi aplikasi dan informasi lainnya</Text>
+            <Text style={styles.subtitle}>
+              Versi aplikasi dan informasi lainnya
+            </Text>
           </View>
         </View>
 
@@ -35,24 +51,49 @@ export default function ProfileAboutScreen() {
           <Text style={styles.appName}>Andora</Text>
           <Text style={styles.version}>Versi 1.0.0</Text>
           <Text style={styles.description}>
-            Andora membantu Anda membuat, memahami, dan mengirim dokumen dengan panduan suara yang mudah.
+            Andora membantu Anda membuat, memahami, dan mengirim dokumen dengan
+            panduan suara yang mudah.
           </Text>
         </View>
 
         <View style={styles.list}>
-          <Pressable style={styles.card} accessibilityRole="button" onPress={() => {}}>
+          <Pressable
+            style={styles.card}
+            accessibilityRole="button"
+            onPress={() => {}}
+          >
             <View style={styles.iconCircle}>
-              <Ionicons name="document-text" size={24} color={Andora.colors.primary} />
+              <Ionicons
+                name="document-text"
+                size={24}
+                color={Andora.colors.primary}
+              />
             </View>
             <Text style={styles.cardTitle}>Kebijakan Privasi</Text>
-            <Ionicons name="chevron-forward" size={20} color={Andora.colors.primaryMuted} />
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={Andora.colors.primaryMuted}
+            />
           </Pressable>
-          <Pressable style={styles.card} accessibilityRole="button" onPress={() => {}}>
+          <Pressable
+            style={styles.card}
+            accessibilityRole="button"
+            onPress={() => {}}
+          >
             <View style={styles.iconCircle}>
-              <Ionicons name="shield-checkmark" size={24} color={Andora.colors.primary} />
+              <Ionicons
+                name="shield-checkmark"
+                size={24}
+                color={Andora.colors.primary}
+              />
             </View>
             <Text style={styles.cardTitle}>Syarat Layanan</Text>
-            <Ionicons name="chevron-forward" size={20} color={Andora.colors.primaryMuted} />
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={Andora.colors.primaryMuted}
+            />
           </Pressable>
         </View>
 
@@ -94,7 +135,12 @@ const styles = StyleSheet.create({
     fontWeight: Andora.typography.weight.semibold,
   },
   brandBlock: { alignItems: 'center', marginBottom: Andora.spacing.md },
-  logo: { width: 72, height: 72, borderRadius: 16, marginBottom: Andora.spacing.sm },
+  logo: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    marginBottom: Andora.spacing.sm,
+  },
   appName: {
     color: Andora.colors.text,
     fontSize: Andora.typography.size.heading,

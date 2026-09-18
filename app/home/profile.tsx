@@ -1,16 +1,30 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import { useSessionContext } from '@/hooks/useSession';
 
 // Profile screen from Figma node 87-495 ("Profile").
 const MENU: {
   id: string;
   title: string;
   subtitle: string;
-  href: '/home/profile-personal' | '/home/profile-accessibility' | '/home/profile-security' | '/home/profile-help' | '/home/profile-about';
+  href:
+    | '/home/profile-personal'
+    | '/home/profile-accessibility'
+    | '/home/profile-security'
+    | '/home/profile-help'
+    | '/home/profile-about';
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   {
@@ -52,6 +66,28 @@ const MENU: {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user, signOut } = useSessionContext();
+  const [signingOut, setSigningOut] = useState(false);
+  const displayName =
+    (typeof user?.user_metadata?.full_name === 'string' &&
+      user.user_metadata.full_name) ||
+    (typeof user?.user_metadata?.name === 'string' &&
+      user.user_metadata.name) ||
+    user?.email ||
+    'Pengguna Andora';
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      // Fall through to auth even if server sign-out fails.
+    } finally {
+      setSigningOut(false);
+      router.replace('/auth');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -69,13 +105,14 @@ export default function ProfileScreen() {
             <Image
               source={require('../../assets/images/profile-avatar.png')}
               style={styles.avatarImage}
-              accessibilityLabel="Foto profil Adib Naziri"
+              accessibilityLabel={`Foto profil ${displayName}`}
             />
             <View style={styles.cameraBadge}>
               <Ionicons name="camera" size={18} color="#FFFFFF" />
             </View>
           </View>
-          <Text style={styles.name}>Adib Naziri</Text>
+          <Text style={styles.name}>{displayName}</Text>
+          {user?.email ? <Text style={styles.email}>{user.email}</Text> : null}
         </View>
 
         <View style={styles.menuList}>
@@ -109,9 +146,12 @@ export default function ProfileScreen() {
         <Pressable
           style={styles.logoutButton}
           accessibilityRole="button"
-          onPress={() => router.replace('/auth')}
+          onPress={() => void handleSignOut()}
+          disabled={signingOut}
         >
-          <Text style={styles.logoutText}>Keluar</Text>
+          <Text style={styles.logoutText}>
+            {signingOut ? 'Keluar...' : 'Keluar'}
+          </Text>
         </Pressable>
       </ScrollView>
       <AndoraNavbar />
@@ -162,6 +202,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.54,
     textAlign: 'center',
     marginTop: 8,
+  },
+  email: {
+    color: Andora.colors.textMuted2,
+    fontSize: 14,
+    fontWeight: Andora.typography.weight.semibold,
+    textAlign: 'center',
+    marginTop: 2,
   },
   menuList: { gap: 10 },
   card: {

@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,24 +19,47 @@ const ROWS: {
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { id: 'large-text', title: 'Teks Besar', subtitle: 'Perbesar ukuran teks', icon: 'text' },
-  { id: 'contrast', title: 'Kontras Tinggi', subtitle: 'Tingkatkan kontras tampilan', icon: 'contrast' },
-  { id: 'voice', title: 'Panduan Suara', subtitle: 'Aktifkan panduan suara', icon: 'volume-high' },
-  { id: 'haptic', title: 'Notifikasi Getar', subtitle: 'Getar saat ada notifikasi', icon: 'phone-portrait' },
+  {
+    id: 'large-text',
+    title: 'Teks Besar',
+    subtitle: 'Perbesar ukuran teks',
+    icon: 'text',
+  },
+  {
+    id: 'contrast',
+    title: 'Kontras Tinggi',
+    subtitle: 'Tingkatkan kontras tampilan',
+    icon: 'contrast',
+  },
+  {
+    id: 'voice',
+    title: 'Panduan Suara',
+    subtitle: 'Aktifkan panduan suara',
+    icon: 'volume-high',
+  },
+  {
+    id: 'haptic',
+    title: 'Notifikasi Getar',
+    subtitle: 'Getar saat ada notifikasi',
+    icon: 'phone-portrait',
+  },
 ];
 
 export default function ProfileAccessibilityScreen() {
   const router = useRouter();
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     'large-text': false,
-    contrast: false,
-    voice: true,
-    haptic: true,
+    'contrast': false,
+    'voice': true,
+    'haptic': true,
   });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerRow}>
           <Pressable
             onPress={() => router.back()}
@@ -37,7 +67,11 @@ export default function ProfileAccessibilityScreen() {
             accessibilityRole="button"
             accessibilityLabel="Kembali"
           >
-            <Ionicons name="chevron-back" size={24} color={Andora.colors.primary} />
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={Andora.colors.primary}
+            />
           </Pressable>
           <View style={styles.headerText}>
             <Text style={styles.title}>Pengaturan Aksebilitas</Text>
@@ -49,7 +83,11 @@ export default function ProfileAccessibilityScreen() {
           {ROWS.map((row) => (
             <View key={row.id} style={styles.card}>
               <View style={styles.iconCircle}>
-                <Ionicons name={row.icon} size={24} color={Andora.colors.primary} />
+                <Ionicons
+                  name={row.icon}
+                  size={24}
+                  color={Andora.colors.primary}
+                />
               </View>
               <View style={styles.cardText}>
                 <Text style={styles.cardTitle}>{row.title}</Text>
@@ -57,7 +95,9 @@ export default function ProfileAccessibilityScreen() {
               </View>
               <Switch
                 value={toggles[row.id] ?? false}
-                onValueChange={(value) => setToggles((prev) => ({ ...prev, [row.id]: value }))}
+                onValueChange={(value) =>
+                  setToggles((prev) => ({ ...prev, [row.id]: value }))
+                }
               />
             </View>
           ))}

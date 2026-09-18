@@ -1,29 +1,62 @@
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import { useConversationList } from '@/hooks/useConversations';
+import { useSessionContext } from '@/hooks/useSession';
 
 // FIGMA Andora (Copy) 7IHCYJs2bVqT4uzuCJKzhF node 41-121 (list) + 43-217 (sheet)
-// -> /home/sessions. New-need sheet opens as a modal overlay.
-const EXAMPLES = [
-  'Saya ingin membuat surat izin kampus',
-  'Tolong jelaskan maksud dan isi surat ini',
-  'Saya ingin membuat surat izin dan mengirim surat tersebut',
-] as const;
-
+// -> /home/sessions. List comes from GET /conversations; the sheet
+// creates a conversation then opens /assistant?conversationId=....
 export default function SessionsScreen() {
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const { accessToken } = useSessionContext();
+  const { items, loading, error, create } = useConversationList(
+    query.trim() ? query.trim() : undefined
+  );
+
+  const openConversation = (conversationId: string) => {
+    router.push({
+      pathname: '/assistant',
+      params: { conversationId },
+    });
+  };
+
+  const startConversation = async (withVoice: boolean) => {
+    if (creating) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const created = await create('Percakapan Baru');
+      setSheetOpen(false);
+      router.push({
+        pathname: '/assistant',
+        params: withVoice
+          ? { conversationId: created.id, voice: '1' }
+          : { conversationId: created.id },
+      });
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -36,16 +69,34 @@ export default function SessionsScreen() {
             <Text style={styles.title}>Pesan</Text>
             <Text style={styles.subtitle}>Percakapan dengan Andora</Text>
           </View>
-          <Link href="/home/insight" asChild>
-            <Pressable style={styles.searchCta} accessibilityRole="button">
-              <Text style={styles.searchCtaText}>Cari Pesan</Text>
+        </View>
+        <View style={styles.searchRow}>
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color={Andora.colors.textMuted}
+          />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Cari pesan..."
+            placeholderTextColor={Andora.colors.inputPlaceholder}
+            style={styles.searchInput}
+            returnKeyType="search"
+          />
+          {query ? (
+            <Pressable
+              onPress={() => setQuery('')}
+              accessibilityRole="button"
+              accessibilityLabel="Hapus pencarian"
+            >
               <Ionicons
-                name="search-outline"
-                size={22}
-                color={Andora.colors.onPrimary}
+                name="close-circle"
+                size={20}
+                color={Andora.colors.textMuted}
               />
             </Pressable>
-          </Link>
+          ) : null}
         </View>
 
         <Pressable
@@ -70,33 +121,58 @@ export default function SessionsScreen() {
         </Pressable>
 
         <Text style={styles.sectionTitle}>Percakapan Terakhir</Text>
-        <Pressable
-          onPress={() => router.push('/assistant')}
-          style={styles.rowCard}
-          accessibilityRole="button"
-        >
-          <View style={styles.rowIcon}>
-            <Ionicons
-              name="document-text"
-              size={28}
-              color={Andora.colors.primary}
-            />
+        {loading ? (
+          <View style={styles.stateBox}>
+            <ActivityIndicator size="small" color={Andora.colors.primary} />
+            <Text style={styles.stateText}>Memuat percakapan...</Text>
           </View>
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>Surat Keterangan Tidak Mampu</Text>
-            <Text style={styles.rowBody}>
-              Andora: Surat sudah siap kirim. Ingin dikirim kemana surat ini?
+        ) : error ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>Gagal memuat: {error}</Text>
+          </View>
+        ) : !accessToken ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>
+              Masuk dulu untuk melihat percakapan Anda.
             </Text>
           </View>
-          <View style={styles.rowMeta}>
-            <Text style={styles.rowTime}>Hari ini 10.30</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={Andora.colors.primaryMuted}
-            />
+        ) : items.length === 0 ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>
+              Belum ada percakapan. Mulai kebutuhan baru di atas.
+            </Text>
           </View>
-        </Pressable>
+        ) : (
+          items.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => openConversation(item.id)}
+              style={styles.rowCard}
+              accessibilityRole="button"
+            >
+              <View style={styles.rowIcon}>
+                <Ionicons
+                  name="document-text"
+                  size={28}
+                  color={Andora.colors.primary}
+                />
+              </View>
+              <View style={styles.rowText}>
+                <Text style={styles.rowTitle}>{item.title}</Text>
+                {item.last_message_preview ? (
+                  <Text style={styles.rowBody} numberOfLines={2}>
+                    {item.last_message_preview}
+                  </Text>
+                ) : null}
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={Andora.colors.primaryMuted}
+              />
+            </Pressable>
+          ))
+        )}
       </ScrollView>
 
       <Modal
@@ -120,17 +196,16 @@ export default function SessionsScreen() {
               Ceritakan apa yang ingin Anda lakukan dengan dokumen. Anda bisa
               berkata secara langsung atau mengetik permintaan Anda
             </Text>
-            {EXAMPLES.map((example) => (
-              <View key={example} style={styles.exampleBubble}>
-                <Text style={styles.exampleText}>“{example}”</Text>
-              </View>
-            ))}
+            {createError ? (
+              <Text style={styles.sheetError}>{createError}</Text>
+            ) : null}
             <Text style={styles.sheetPrompt}>Sampaikan kebutuhan Anda</Text>
             <View style={styles.sheetRow}>
               <Pressable
                 onPress={() => setSheetOpen(false)}
                 style={styles.cancelCta}
                 accessibilityRole="button"
+                disabled={creating}
               >
                 <Text style={styles.cancelCtaText}>Batalkan</Text>
                 <Ionicons
@@ -140,14 +215,14 @@ export default function SessionsScreen() {
                 />
               </Pressable>
               <Pressable
-                onPress={() => {
-                  setSheetOpen(false);
-                  router.push('/assistant');
-                }}
+                onPress={() => void startConversation(false)}
                 style={styles.typeCta}
                 accessibilityRole="button"
+                disabled={creating}
               >
-                <Text style={styles.typeCtaText}>Ketik Saja</Text>
+                <Text style={styles.typeCtaText}>
+                  {creating ? 'Membuat...' : 'Ketik Saja'}
+                </Text>
                 <Ionicons
                   name="keypad-outline"
                   size={20}
@@ -155,6 +230,21 @@ export default function SessionsScreen() {
                 />
               </Pressable>
             </View>
+            <Pressable
+              onPress={() => void startConversation(true)}
+              style={styles.voiceCta}
+              accessibilityRole="button"
+              disabled={creating}
+            >
+              <Text style={styles.voiceCtaText}>
+                {creating ? 'Membuat...' : 'Bicara Sekarang'}
+              </Text>
+              <Ionicons
+                name="mic-outline"
+                size={20}
+                color={Andora.colors.onPrimary}
+              />
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -183,20 +273,22 @@ const styles = StyleSheet.create({
     fontSize: Andora.typography.size.bodyLarge,
     fontWeight: Andora.typography.weight.semibold,
   },
-  searchCta: {
-    backgroundColor: Andora.colors.primary,
+  searchRow: {
+    backgroundColor: Andora.colors.surface,
+    borderWidth: 1,
+    borderColor: Andora.colors.border,
     borderRadius: 10,
-    height: 55,
-    width: 146,
+    paddingHorizontal: Andora.spacing.sm,
+    minHeight: 48,
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: Andora.spacing.md,
   },
-  searchCtaText: {
-    color: Andora.colors.onPrimary,
-    fontSize: Andora.typography.size.subtitle,
-    fontWeight: Andora.typography.weight.bold,
+  searchInput: {
+    flex: 1,
+    color: Andora.colors.inputFilled,
+    fontSize: Andora.typography.size.bodyLarge,
   },
   newCard: {
     backgroundColor: Andora.colors.surfaceElevated,
@@ -265,12 +357,6 @@ const styles = StyleSheet.create({
     fontSize: Andora.typography.size.body,
   },
   rowMeta: { alignItems: 'center', gap: 12, width: 46 },
-  rowTime: {
-    color: Andora.colors.timeMuted,
-    fontSize: Andora.typography.size.caption,
-    fontWeight: Andora.typography.weight.semibold,
-    textAlign: 'center',
-  },
   overlay: {
     flex: 1,
     backgroundColor: Andora.colors.overlay,
@@ -365,5 +451,43 @@ const styles = StyleSheet.create({
     color: Andora.colors.onPrimary,
     fontSize: Andora.typography.size.subtitle,
     fontWeight: Andora.typography.weight.bold,
+  },
+  voiceCta: {
+    marginTop: 12,
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: Andora.colors.brand,
+    borderRadius: 10,
+    height: 55,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceCtaText: {
+    color: Andora.colors.onPrimary,
+    fontSize: Andora.typography.size.subtitle,
+    fontWeight: Andora.typography.weight.bold,
+  },
+  stateBox: {
+    backgroundColor: Andora.colors.surface,
+    borderWidth: 1,
+    borderColor: Andora.colors.border,
+    borderRadius: 10,
+    padding: Andora.spacing.md,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: Andora.spacing.md,
+  },
+  stateText: {
+    color: Andora.colors.textMuted,
+    fontSize: Andora.typography.size.body,
+    textAlign: 'center',
+  },
+  sheetError: {
+    color: Andora.colors.danger,
+    fontSize: Andora.typography.size.body,
+    fontWeight: Andora.typography.weight.semibold,
+    textAlign: 'center',
+    marginBottom: Andora.spacing.sm,
   },
 });

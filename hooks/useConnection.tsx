@@ -3,48 +3,40 @@ import {
   type TokenSourceFetchOptions,
   type TokenSourceResponseObject,
 } from 'livekit-client';
-import { createContext, useContext, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { SessionProvider, useSession } from '@livekit/components-react';
-import { parseAndoraTokenResponse } from '@/lib/andoraToken';
+import { andoraApiBaseUrl, fetchLivekitToken } from '@/lib/andoraApi';
+import { useSessionContext } from '@/hooks/useSession';
 
 const sandboxID = process.env.EXPO_PUBLIC_LIVEKIT_SANDBOX_ID ?? '';
-const andoraTokenUrl = process.env.EXPO_PUBLIC_ANDORA_TOKEN_URL ?? '';
 const agentName = process.env.EXPO_PUBLIC_LIVEKIT_AGENT_NAME || undefined;
 
-const hardcodedUrl = '';
-const hardcodedToken = '';
-
-const homepageAgentUrl = 'https://livekit.com/api/homepage-agent/token';
-
-async function fetchAndoraToken(
-  options: TokenSourceFetchOptions
-): Promise<TokenSourceResponseObject> {
-  const res = await fetch(andoraTokenUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      roomName: options.roomName,
-      participantName: options.participantName,
-      participantIdentity: options.participantIdentity,
-      agentName: options.agentName ?? agentName,
-    }),
-  });
-  if (!res.ok) {
-    throw new Error('Andora token server responded with status ' + res.status);
-  }
-  const data = await res.json();
-  return parseAndoraTokenResponse(data);
+interface PendingVoiceAuth {
+  conversationId: string;
+  accessToken: string;
 }
 
 interface ConnectionContextType {
   isConnectionActive: boolean;
-  connect: () => void;
+  connectError: string | null;
+  connect: (opts?: {
+    conversationId?: string;
+    accessToken?: string;
+  }) => Promise<void>;
   disconnect: () => void;
 }
 
 const ConnectionContext = createContext<ConnectionContextType>({
   isConnectionActive: false,
-  connect: () => {},
+  connectError: null,
+  connect: async () => {},
   disconnect: () => {},
 });
 
@@ -60,23 +52,54 @@ interface ConnectionProviderProps {
   children: React.ReactNode;
 }
 
+function backendConfigured(): boolean {
+  try {
+    andoraApiBaseUrl();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const [isConnectionActive, setIsConnectionActive] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const { accessToken: sessionToken } = useSessionContext();
+  const pendingRef = useRef<PendingVoiceAuth | null>(null);
+  const sessionTokenRef = useRef<string | null>(null);
+  sessionTokenRef.current = sessionToken;
 
   const tokenSource = useMemo(() => {
-    if (andoraTokenUrl) {
-      return TokenSource.custom(fetchAndoraToken);
+    if (backendConfigured()) {
+      const fetchBackendToken = async (
+        _options: TokenSourceFetchOptions
+      ): Promise<TokenSourceResponseObject> => {
+        const pending = pendingRef.current;
+        const accessToken = pending?.accessToken ?? sessionTokenRef.current;
+        const conversationId = pending?.conversationId ?? '';
+        if (!accessToken) {
+          throw new Error(
+            'Belum masuk. Masuk dulu dengan akun Google untuk memakai suara.'
+          );
+        }
+        if (!conversationId) {
+          throw new Error(
+            'Conversation belum dibuat. Mulai percakapan baru dulu.'
+          );
+        }
+        // POST /livekit/token validates room_name = andora-{conversation_id}.
+        return fetchLivekitToken(fetch, accessToken, conversationId);
+      };
+      return TokenSource.custom(fetchBackendToken);
     }
     if (sandboxID) {
       return TokenSource.sandboxTokenServer(sandboxID);
     }
-    if (hardcodedUrl && hardcodedToken) {
-      return TokenSource.literal({
-        serverUrl: hardcodedUrl,
-        participantToken: hardcodedToken,
-      });
-    }
-    return TokenSource.endpoint(homepageAgentUrl);
+    return TokenSource.custom(async () => {
+      throw new Error(
+        'Backend andora-be belum dikonfigurasi. Isi EXPO_PUBLIC_ANDORA_API_URL.'
+      );
+    });
   }, []);
 
   const session = useSession(
@@ -85,19 +108,35 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   );
   const { start: startSession, end: endSession } = session;
 
-  const value = useMemo(() => {
-    return {
-      isConnectionActive,
-      connect: () => {
-        setIsConnectionActive(true);
-        startSession();
-      },
-      disconnect: () => {
+  const connect = useCallback(
+    async (opts?: { conversationId?: string; accessToken?: string }) => {
+      setConnectError(null);
+      pendingRef.current = {
+        conversationId: opts?.conversationId ?? '',
+        accessToken: opts?.accessToken ?? sessionTokenRef.current ?? '',
+      };
+      setIsConnectionActive(true);
+      try {
+        await startSession();
+      } catch (error) {
         setIsConnectionActive(false);
-        endSession();
-      },
-    };
-  }, [startSession, endSession, isConnectionActive]);
+        const message = error instanceof Error ? error.message : String(error);
+        setConnectError(message);
+        throw error;
+      }
+    },
+    [startSession]
+  );
+
+  const disconnect = useCallback(() => {
+    setIsConnectionActive(false);
+    pendingRef.current = null;
+    endSession();
+  }, [endSession]);
+
+  const value = useMemo(() => {
+    return { isConnectionActive, connectError, connect, disconnect };
+  }, [isConnectionActive, connectError, connect, disconnect]);
 
   return (
     <SessionProvider session={session}>

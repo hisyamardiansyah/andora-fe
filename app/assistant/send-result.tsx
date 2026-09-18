@@ -6,33 +6,57 @@ import { Andora } from '@/constants/Andora';
 
 // FIGMA Andora (Copy) yguOf0BB6X0G6FBhAVPHb9 node 48-289 -> /assistant/send-result.
 // Success state; error is handled by /assistant/send-error.
+// Card shows the actual send time plus optional title/recipient params.
 export default function SendResultScreen() {
   const router = useRouter();
-  const { ok } = useLocalSearchParams<{ ok?: string }>();
+  const { ok, title, recipient } = useLocalSearchParams<{
+    ok?: string;
+    title?: string;
+    recipient?: string;
+  }>();
   void ok;
+  const sentAt = new Date().toLocaleString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.body}>
         <Text style={styles.brand}>Andora</Text>
         <View style={styles.visual}>
-          <Ionicons name="checkmark-circle" size={120} color={Andora.colors.success} />
+          <Ionicons
+            name="checkmark-circle"
+            size={120}
+            color={Andora.colors.success}
+          />
         </View>
         <Text style={styles.title}>Dokumen Terkirim</Text>
         <Text style={styles.subtitle}>Mohon tunggu sebentar</Text>
         <View style={styles.card}>
-          <Ionicons name="document-text" size={38} color={Andora.colors.primary} />
-          <Text style={styles.cardTitle}>Surat keterangan tidak mampu</Text>
+          <Ionicons
+            name="document-text"
+            size={38}
+            color={Andora.colors.primary}
+          />
+          <Text style={styles.cardTitle}>
+            {typeof title === 'string' && title ? title : 'Surat Andora'}
+          </Text>
           <View style={styles.row}>
             <Text style={styles.label}>Pengiriman Via</Text>
             <Text style={styles.value}>WhatsApp</Text>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Kontak Penerima</Text>
-            <Text style={styles.value}>Akademik Fakultas Ilmu Budaya UGM</Text>
-          </View>
+          {typeof recipient === 'string' && recipient ? (
+            <View style={styles.row}>
+              <Text style={styles.label}>Kontak Penerima</Text>
+              <Text style={styles.value}>{recipient}</Text>
+            </View>
+          ) : null}
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>15 : 42 ・20 September 2026</Text>
+            <Text style={styles.badgeText}>{sentAt}</Text>
           </View>
         </View>
         <Pressable
@@ -49,7 +73,12 @@ export default function SendResultScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Andora.colors.background },
-  body: { flex: 1, padding: Andora.spacing.lg, alignItems: 'center', justifyContent: 'center' },
+  body: {
+    flex: 1,
+    padding: Andora.spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   brand: {
     color: Andora.colors.text,
     fontSize: 30,
@@ -57,7 +86,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Andora.spacing.md,
   },
-  visual: { width: 220, height: 211, alignItems: 'center', justifyContent: 'center' },
+  visual: {
+    width: 220,
+    height: 211,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: {
     color: Andora.colors.text,
     fontSize: Andora.typography.size.title,
