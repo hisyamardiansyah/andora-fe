@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import DebugBanner from '@/components/DebugBanner';
 import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
@@ -106,6 +107,7 @@ export default function ProfileScreen() {
           <Text style={styles.title}>Profil</Text>
           <Text style={styles.subtitle}>Informasi Personal Anda</Text>
         </View>
+        {debugEnabled ? <DebugBanner /> : null}
 
         <View style={styles.avatarBlock}>
           <View style={styles.avatarWrap}>

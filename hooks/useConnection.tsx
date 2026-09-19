@@ -132,6 +132,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         conversationId: opts?.conversationId ?? '',
         accessToken: opts?.accessToken ?? sessionTokenRef.current ?? '',
       };
+      // Debug mode has no LiveKit room; the assistant screen simulates
+      // the voice turn against the dummy backend instead.
+      if (debugEnabled) {
+        setIsConnectionActive(true);
+        return;
+      }
       setIsConnectionActive(true);
       try {
         await startSession();
@@ -142,7 +148,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         throw error;
       }
     },
-    [startSession]
+    [startSession, debugEnabled]
   );
 
   const disconnect = useCallback(() => {

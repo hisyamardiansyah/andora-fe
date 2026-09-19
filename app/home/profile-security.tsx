@@ -12,9 +12,12 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import DebugBanner from '@/components/DebugBanner';
+import { useDebugMode } from '@/hooks/useDebugMode';
 
 export default function ProfileSecurityScreen() {
   const router = useRouter();
+  const { debugEnabled } = useDebugMode();
   const [pinLock, setPinLock] = useState(true);
   const [biometric, setBiometric] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -45,6 +48,7 @@ export default function ProfileSecurityScreen() {
             </Text>
           </View>
         </View>
+        {debugEnabled ? <DebugBanner /> : null}
 
         <View style={styles.list}>
           <View style={styles.card}>

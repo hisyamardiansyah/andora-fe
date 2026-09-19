@@ -15,6 +15,8 @@ export const DEBUG_ACCESS_TOKEN = 'debug-access-token';
 export const DEBUG_USER_ID = 'debug-user-1';
 export const DEBUG_USER_EMAIL = 'debug@andora.id';
 export const DEBUG_USER_NAME = 'Pengguna Debug';
+export const DEBUG_USER_PHONE = '+62 812-3456-7890';
+export const DEBUG_USER_ADDRESS = 'Jl. Merdeka No. 17, Samarinda';
 
 let msgCounter = 100;
 

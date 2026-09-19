@@ -11,9 +11,12 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import DebugBanner from '@/components/DebugBanner';
+import { useDebugMode } from '@/hooks/useDebugMode';
 
 export default function ProfileAboutScreen() {
   const router = useRouter();
+  const { debugEnabled } = useDebugMode();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -41,6 +44,7 @@ export default function ProfileAboutScreen() {
             </Text>
           </View>
         </View>
+        {debugEnabled ? <DebugBanner /> : null}
 
         <View style={styles.brandBlock}>
           <Image

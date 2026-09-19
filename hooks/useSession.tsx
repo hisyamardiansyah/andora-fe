@@ -13,9 +13,11 @@ import type { Session, User } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import {
   DEBUG_ACCESS_TOKEN,
+  DEBUG_USER_ADDRESS,
   DEBUG_USER_EMAIL,
   DEBUG_USER_ID,
   DEBUG_USER_NAME,
+  DEBUG_USER_PHONE,
 } from '@/lib/debugMockBackend';
 import { useDebugMode } from '@/hooks/useDebugMode';
 
@@ -74,7 +76,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         user: {
           id: DEBUG_USER_ID,
           email: DEBUG_USER_EMAIL,
-          user_metadata: { full_name: DEBUG_USER_NAME },
+          user_metadata: {
+            full_name: DEBUG_USER_NAME,
+            phone: DEBUG_USER_PHONE,
+            address: DEBUG_USER_ADDRESS,
+          },
         },
       }) as unknown as Session,
     []

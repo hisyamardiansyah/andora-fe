@@ -14,7 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import DebugBanner from '@/components/DebugBanner';
 import { useConversationList } from '@/hooks/useConversations';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
 // FIGMA Andora (Copy) 7IHCYJs2bVqT4uzuCJKzhF node 41-121 (list) + 43-217 (sheet)
@@ -27,6 +29,7 @@ export default function SessionsScreen() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const { accessToken } = useSessionContext();
+  const { debugEnabled } = useDebugMode();
   const { items, loading, error, create } = useConversationList(
     query.trim() ? query.trim() : undefined
   );
@@ -70,6 +73,7 @@ export default function SessionsScreen() {
             <Text style={styles.subtitle}>Percakapan dengan Andora</Text>
           </View>
         </View>
+        {debugEnabled ? <DebugBanner /> : null}
         <View style={styles.searchRow}>
           <Ionicons
             name="search-outline"
@@ -130,7 +134,7 @@ export default function SessionsScreen() {
           <View style={styles.stateBox}>
             <Text style={styles.stateText}>Gagal memuat: {error}</Text>
           </View>
-        ) : !accessToken ? (
+        ) : !accessToken && !debugEnabled ? (
           <View style={styles.stateBox}>
             <Text style={styles.stateText}>
               Masuk dulu untuk melihat percakapan Anda.

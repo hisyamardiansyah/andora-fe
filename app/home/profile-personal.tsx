@@ -13,11 +13,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import DebugBanner from '@/components/DebugBanner';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
 export default function ProfilePersonalScreen() {
   const router = useRouter();
   const { user } = useSessionContext();
+  const { debugEnabled } = useDebugMode();
   const sessionName =
     (typeof user?.user_metadata?.full_name === 'string' &&
       user.user_metadata.full_name) ||
@@ -31,13 +34,23 @@ export default function ProfilePersonalScreen() {
       ? user.user_metadata.phone
       : ''
   );
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState(
+    typeof user?.user_metadata?.address === 'string'
+      ? user.user_metadata.address
+      : ''
+  );
   const [saved, setSaved] = useState(false);
 
   // Sync once the session user resolves (initial render may be anonymous).
   useEffect(() => {
     if (sessionName) setName((prev) => prev || sessionName);
     if (user?.email) setEmail((prev) => prev || (user.email ?? ''));
+    if (typeof user?.user_metadata?.phone === 'string') {
+      setPhone((prev) => prev || (user.user_metadata.phone as string));
+    }
+    if (typeof user?.user_metadata?.address === 'string') {
+      setAddress((prev) => prev || (user.user_metadata.address as string));
+    }
   }, [sessionName, user]);
 
   return (
@@ -64,6 +77,7 @@ export default function ProfilePersonalScreen() {
             <Text style={styles.subtitle}>Lihat dan ubah data diri</Text>
           </View>
         </View>
+        {debugEnabled ? <DebugBanner /> : null}
 
         <View style={styles.avatarBlock}>
           <Image

@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
+import DebugBanner from '@/components/DebugBanner';
+import { useDebugMode } from '@/hooks/useDebugMode';
 
 const ROWS: {
   id: string;
@@ -47,6 +49,7 @@ const ROWS: {
 
 export default function ProfileAccessibilityScreen() {
   const router = useRouter();
+  const { debugEnabled } = useDebugMode();
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     'large-text': false,
     'contrast': false,
@@ -78,6 +81,7 @@ export default function ProfileAccessibilityScreen() {
             <Text style={styles.subtitle}>Sesuaikan pengalaman pengguna</Text>
           </View>
         </View>
+        {debugEnabled ? <DebugBanner /> : null}
 
         <View style={styles.list}>
           {ROWS.map((row) => (
