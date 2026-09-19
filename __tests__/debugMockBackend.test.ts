@@ -1,10 +1,12 @@
 // Behavior tests for the shipped debug dummy backend.
 import {
   DEBUG_USER_ID,
+  debugAppendVoiceExchange,
   debugCreateConversation,
   debugFetchLivekitToken,
   debugGetConversationDetail,
   debugListConversations,
+  debugMicScript,
   debugScenarioConversationIds,
   debugScenarioDocuments,
   debugScenarioIntent,
@@ -74,5 +76,22 @@ describe('debug dummy backend', () => {
     expect(intent.conversationId).toBe(ids.kirim);
     expect(intent.fileUrl).toBe(docs[0]?.url);
     expect(intent.caption).toMatch(/Kaltim Tuntas/);
+  });
+
+  it('plays the mic script exchange by exchange like hold-to-talk', () => {
+    const created = debugCreateConversation('Mic Demo');
+    const script = debugMicScript();
+    expect(script.length).toBeGreaterThanOrEqual(5);
+    const first = script[0];
+    const second = script[1];
+    if (!first || !second) {
+      throw new Error('Mic script is empty');
+    }
+    const turnOne = debugAppendVoiceExchange(created.id, first);
+    expect(turnOne.user_message.content).toBe(first.user);
+    expect(turnOne.assistant_message.content).toBe(first.assistant);
+    const turnTwo = debugAppendVoiceExchange(created.id, second);
+    expect(turnTwo.user_message.content).toBe(second.user);
+    expect(debugGetConversationDetail(created.id).messages).toHaveLength(4);
   });
 });

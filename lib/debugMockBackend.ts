@@ -343,6 +343,74 @@ export function debugScenarioIntent(): DebugScenarioIntent {
   };
 }
 
+// Multi-message mic script: each press of the mic in demo mode plays the
+// next pair, so the transcript grows longer like a real conversation.
+export interface DebugMicExchange {
+  user: string;
+  assistant: string;
+}
+
+export function debugMicScript(): DebugMicExchange[] {
+  return [
+    {
+      user: 'Halo Andora, Beasiswa Kaltim Tuntas itu apa sih?',
+      assistant:
+        'Halo Rizky! Beasiswa Kaltim Tuntas adalah program bantuan pendidikan dari Pemprov Kalimantan Timur untuk pelajar dan mahasiswa asal Kaltim. Ada dua jalur utama: Beasiswa Tuntas untuk mahasiswa aktif berprestasi, dan Beasiswa Stimulan untuk pelajar SMA dan mahasiswa baru.',
+    },
+    {
+      user: 'Kalau saya mahasiswa semester 6 IPK 3,4 bisa ikut yang mana?',
+      assistant:
+        'Bisa ikut jalur Tuntas. Syaratnya: KTP/KK Kaltim, mahasiswa aktif minimal semester 2 dengan IPK minimal 3,00, tidak sedang menerima beasiswa lain, plus surat pernyataan bermeterai dan transkrip nilai terakhir. IPK 3,4 kamu sudah aman.',
+    },
+    {
+      user: 'Berkasnya apa saja yang harus disiapkan?',
+      assistant:
+        'Siapkan lima berkas: (1) scan KTP dan kartu keluarga, (2) KTM atau surat keterangan aktif kuliah, (3) transkrip nilai terakhir, (4) surat pernyataan bermeterai, dan (5) pas foto terbaru. Pendaftarannya dibuka tiap awal tahun ajaran lewat portal resmi.',
+    },
+    {
+      user: 'Tolong buatkan surat pernyataannya atas nama saya.',
+      assistant:
+        'Bisa. Saya buatkan template Surat Pernyataan Pendaftar Beasiswa Kaltim Tuntas atas nama Rizky Pratama, NIM 2009106011, Universitas Mulawarman. Saya proses sekarang ya, hasilnya muncul sebagai kartu dokumen PDF di bawah.',
+    },
+    {
+      user: 'Kirim suratnya ke WhatsApp saya 081234567890.',
+      assistant:
+        'Siap. Saya siapkan PDF-nya, lalu WhatsApp akan terbuka dengan dokumen terlampir ke nomor 081234567890. Kamu tinggal tekan kirim di WhatsApp.',
+    },
+  ];
+}
+
+export function debugAppendVoiceExchange(
+  conversationId: string,
+  exchange: DebugMicExchange
+): AndoraChatTurn {
+  seed();
+  const detail = store.get(conversationId);
+  if (!detail) {
+    throw new Error('Conversation tidak ditemukan');
+  }
+  const userMessage = msg(conversationId, 'user', exchange.user, 'voice');
+  const assistantMessage = msg(
+    conversationId,
+    'assistant',
+    exchange.assistant,
+    'voice'
+  );
+  const updated: AndoraConversationDetail = {
+    ...detail,
+    messages: [...detail.messages, userMessage, assistantMessage],
+    last_message_preview: `Andora: ${assistantMessage.content.slice(0, 80)}`,
+    last_message_at: assistantMessage.created_at,
+    updated_at: assistantMessage.created_at,
+  };
+  store.set(conversationId, updated);
+  return {
+    conversation_id: conversationId,
+    user_message: userMessage,
+    assistant_message: assistantMessage,
+  };
+}
+
 export function debugScenarioConversationIds(): {
   tanya: string;
   template: string;

@@ -28,7 +28,8 @@ import {
   uploadDocumentForConversation,
 } from '@/lib/andoraDocuments';
 import {
-  debugSendVoiceTurn,
+  debugAppendVoiceExchange,
+  debugMicScript,
   debugUploadDocument,
 } from '@/lib/debugMockBackend';
 import {
@@ -118,6 +119,15 @@ export default function AssistantChatScreen() {
   >(null);
   const scrollRef = useRef<ScrollView | null>(null);
   const autoJoinedRef = useRef(false);
+  // Demo mic script position per conversation: each hold/release plays
+  // the next exchange so bubbles appear one by one like a real talk.
+  const micStepRef = useRef<Record<string, number>>({});
+  const micHoldRef = useRef<{
+    conversationId: string;
+    exchangeIndex: number;
+    userItemId: string;
+    timer: ReturnType<typeof setTimeout> | null;
+  } | null>(null);
 
   const {
     status: liveVoiceStatus,
@@ -386,7 +396,33 @@ export default function AssistantChatScreen() {
   const handleMicIn = async () => {
     setVoiceError(null);
     if (debugEnabled) {
+      const id = typeof conversationId === 'string' ? conversationId : '';
+      if (!id) {
+        setVoiceError('Pilih percakapan dulu sebelum bicara.');
+        return;
+      }
+      // While holding, show only the user bubble after a short beat.
+      if (micHoldRef.current?.timer) {
+        clearTimeout(micHoldRef.current.timer);
+      }
+      const script = debugMicScript();
+      const step = micStepRef.current[id] ?? 0;
+      const exchange = script[step % script.length];
+      if (!exchange) return;
       setVoiceStatusOverride('recording');
+      const userItemId = `mic-user-${Date.now()}`;
+      micHoldRef.current = {
+        conversationId: id,
+        exchangeIndex: step % script.length,
+        userItemId,
+        timer: setTimeout(() => {
+          setLocalItems((prev) =>
+            prev.some((i) => i.id === userItemId)
+              ? prev
+              : [...prev, { kind: 'user', id: userItemId, text: exchange.user }]
+          );
+        }, 600),
+      };
       return;
     }
     try {
@@ -408,25 +444,42 @@ export default function AssistantChatScreen() {
 
   const handleMicOut = async () => {
     if (debugEnabled) {
+      const held = micHoldRef.current;
+      micHoldRef.current = null;
+      if (held?.timer) {
+        clearTimeout(held.timer);
+      }
       const id = typeof conversationId === 'string' ? conversationId : '';
-      if (!id) {
-        setVoiceError('Pilih percakapan dulu sebelum bicara.');
+      if (!id || !held || held.conversationId !== id) {
+        if (!id) {
+          setVoiceError('Pilih percakapan dulu sebelum bicara.');
+        }
+        setVoiceStatusOverride(null);
+        return;
+      }
+      const script = debugMicScript();
+      const exchange = script[held.exchangeIndex % script.length];
+      if (!exchange) {
         setVoiceStatusOverride(null);
         return;
       }
       setVoiceStatusOverride('processing');
       try {
-        const turn = debugSendVoiceTurn(
-          id,
-          'Kirim surat pernyataannya ke WhatsApp saya 081234567890.'
+        // Make sure the user bubble exists even on a quick tap.
+        setLocalItems((prev) =>
+          prev.some((i) => i.id === held.userItemId)
+            ? prev
+            : [
+                ...prev,
+                { kind: 'user', id: held.userItemId, text: exchange.user },
+              ]
         );
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        const turn = debugAppendVoiceExchange(id, exchange);
+        // Show only the assistant bubble on release: the user bubble
+        // above stands in for the persisted user message.
         setLocalItems((prev) => [
-          ...prev,
-          {
-            kind: 'user',
-            id: turn.user_message.id,
-            text: turn.user_message.content,
-          },
+          ...prev.filter((i) => i.id !== turn.user_message.id),
           {
             kind: 'andora',
             id: turn.assistant_message.id,
@@ -434,17 +487,23 @@ export default function AssistantChatScreen() {
           },
         ]);
         await refresh();
-        // Scenario 3: finished random PDF arrives, then the WhatsApp
-        // intent signal opens share with the same file.
-        const pdf = await generateDemoScenarioPdf();
-        handleDocumentReady(pdf.docTitle, pdf.uri, pdf.uri, pdf.fileName);
-        await handleWhatsAppSignal({
-          phoneNumber: '6281234567890',
-          fileUrl: pdf.uri,
-          fileName: pdf.fileName,
-          caption: randomDemoCaption(pdf.referenceNo),
-          localUri: pdf.uri,
-        });
+        micStepRef.current[id] = held.exchangeIndex + 1;
+        // Final exchange finishes the scenario: random PDF card, then
+        // the WhatsApp intent share with the same file.
+        if (held.exchangeIndex === script.length - 1) {
+          const pdf = await generateDemoScenarioPdf();
+          handleDocumentReady(pdf.docTitle, pdf.uri, pdf.uri, pdf.fileName);
+          await handleWhatsAppSignal({
+            phoneNumber: '6281234567890',
+            fileUrl: pdf.uri,
+            fileName: pdf.fileName,
+            caption: randomDemoCaption(pdf.referenceNo),
+            localUri: pdf.uri,
+          });
+        } else if (held.exchangeIndex === script.length - 2) {
+          const pdf = await generateDemoScenarioPdf();
+          handleDocumentReady(pdf.docTitle, pdf.uri, pdf.uri, pdf.fileName);
+        }
       } catch (e) {
         setVoiceError(e instanceof Error ? e.message : String(e));
       } finally {
