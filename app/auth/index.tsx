@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import { useDebugMode } from '@/hooks/useDebugMode';
 import { SESSION_CANCELLED_CODE, useSessionContext } from '@/hooks/useSession';
+import { demoTapReached, recordDemoTap } from '@/lib/demoTap';
 
 // Login screen matching Figma node 87-675 ("Profile"). Illustration and
 // Google G mark are PNGs exported from that node; doc/status glyphs use Ionicons.
@@ -24,6 +26,7 @@ export default function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [debugBusy, setDebugBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const brandTaps = useRef<number[]>([]);
 
   useEffect(() => {
     if (!loading && session) {
@@ -58,6 +61,15 @@ export default function AuthScreen() {
     }
   };
 
+  // Hidden demo entry: tap the Andora brand name 5 times quickly.
+  const handleBrandTap = () => {
+    brandTaps.current = recordDemoTap(brandTaps.current, Date.now());
+    if (demoTapReached(brandTaps.current)) {
+      brandTaps.current = [];
+      void handleDebugMode();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView
@@ -65,7 +77,12 @@ export default function AuthScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.brandRow}>
+          <Pressable
+            onPress={handleBrandTap}
+            style={styles.brandRow}
+            accessibilityRole="button"
+            accessibilityLabel="Andora"
+          >
             <Image
               style={styles.brandLogo}
               source={require('../../assets/images/andora-logo-icon1.png')}
@@ -73,7 +90,7 @@ export default function AuthScreen() {
               accessibilityLabel="Andora logo"
             />
             <Text style={styles.brandName}>Andora</Text>
-          </View>
+          </Pressable>
           <Text style={styles.tagline}>
             Asisten untuk Mengakses Keperluan Dokumen yang Setara
           </Text>
@@ -126,23 +143,6 @@ export default function AuthScreen() {
           </Text>
         ) : null}
 
-        <TouchableOpacity
-          onPress={() => void handleDebugMode()}
-          activeOpacity={0.85}
-          style={styles.guestButton}
-          accessibilityRole="button"
-          accessibilityLabel="Lanjutkan sebagai tamu"
-          disabled={debugBusy}
-        >
-          <Ionicons
-            name="person-outline"
-            size={20}
-            color={Andora.colors.primary}
-          />
-          <Text style={styles.guestText}>
-            {debugBusy ? 'Membuka...' : 'Lanjutkan sebagai tamu'}
-          </Text>
-        </TouchableOpacity>
         <View style={styles.privacyRow}>
           <Ionicons
             name="lock-closed"
@@ -244,26 +244,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  guestButton: {
-    width: 380,
-    maxWidth: '100%',
-    height: 55,
-    marginTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: Andora.colors.surface,
-    borderWidth: 1,
-    borderColor: Andora.colors.borderStrong,
-    borderRadius: 20,
-  },
-  guestText: {
-    color: Andora.colors.primary,
-    fontSize: Andora.typography.size.title,
-    fontWeight: Andora.typography.weight.bold,
-    letterSpacing: -0.6,
   },
   privacyText: {
     flex: 1,
