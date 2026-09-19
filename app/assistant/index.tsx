@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AssistantOrb from '@/components/AssistantOrb';
+import { TypingDots, TypingText } from '@/components/TypingBubble';
 import { useConnection } from '@/hooks/useConnection';
 import { useConversationDetail } from '@/hooks/useConversations';
 import { useDebugMode } from '@/hooks/useDebugMode';
@@ -52,8 +53,8 @@ import { ConnectionState, RoomEvent } from 'livekit-client';
 // Text goes through POST /conversations/{id}/messages; voice uses the
 // andora-be LiveKit worker (RPC hold/release + andora.turn.* events).
 type ChatItem =
-  | { kind: 'andora'; id: string; text: string }
-  | { kind: 'user'; id: string; text: string }
+  | { kind: 'andora'; id: string; text: string; typing?: boolean }
+  | { kind: 'user'; id: string; text: string; typing?: boolean }
   | { kind: 'notice'; id: string; text: string };
 
 // LiveKit ConnectionState -> Indonesian status label.
@@ -246,6 +247,16 @@ export default function AssistantChatScreen() {
     router.back();
   };
 
+  const finishTyping = (itemId: string) => {
+    setLocalItems((prev) =>
+      prev.map((i) =>
+        i.id === itemId && (i.kind === 'user' || i.kind === 'andora')
+          ? { ...i, typing: false }
+          : i
+      )
+    );
+  };
+
   const handleDocumentReady = (
     namaDokumen: string,
     url: string,
@@ -413,13 +424,22 @@ export default function AssistantChatScreen() {
         conversationId: id,
         exchangeIndex: step % script.length,
         userItemId,
+        // Stage 1 (on hold): user bubble types itself out.
         timer: setTimeout(() => {
           setLocalItems((prev) =>
             prev.some((i) => i.id === userItemId)
               ? prev
-              : [...prev, { kind: 'user', id: userItemId, text: exchange.user }]
+              : [
+                  ...prev,
+                  {
+                    kind: 'user',
+                    id: userItemId,
+                    text: exchange.user,
+                    typing: true,
+                  },
+                ]
           );
-        }, 600),
+        }, 350),
       };
       return;
     }
@@ -464,18 +484,34 @@ export default function AssistantChatScreen() {
       setVoiceStatusOverride('processing');
       try {
         const turn = debugAppendVoiceExchange(id, exchange);
-        // Replace the hold-time user bubble with the persisted ids so
-        // the transcript shows each message exactly once after refresh.
+        // Stage 2 (on release): Andora bubble appears with typing dots
+        // first, then types the reply out. The hold-time user bubble is
+        // replaced so each message shows exactly once after refresh.
+        const assistantItemId = `mic-andora-${Date.now()}`;
         setLocalItems((prev) => [
           ...prev.filter(
             (i) => i.id !== held.userItemId && i.id !== turn.user_message.id
           ),
           {
             kind: 'andora',
-            id: turn.assistant_message.id,
-            text: turn.assistant_message.content,
+            id: assistantItemId,
+            text: '',
+            typing: true,
           },
         ]);
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        setLocalItems((prev) =>
+          prev.map((i) =>
+            i.id === assistantItemId
+              ? {
+                  kind: 'andora',
+                  id: turn.assistant_message.id,
+                  text: turn.assistant_message.content,
+                  typing: true,
+                }
+              : i
+          )
+        );
         await refresh();
         micStepRef.current[id] = held.exchangeIndex + 1;
         // Final exchange finishes the scenario: random PDF card, then
@@ -607,7 +643,11 @@ export default function AssistantChatScreen() {
                   />
                 </View>
                 <View style={styles.andoraBubble}>
-                  <Text style={styles.andoraText}>{item.text}</Text>
+                  {item.typing ? (
+                    <TypingDots color={Andora.colors.textMuted} />
+                  ) : (
+                    <Text style={styles.andoraText}>{item.text}</Text>
+                  )}
                 </View>
               </View>
             );
@@ -615,7 +655,15 @@ export default function AssistantChatScreen() {
           return (
             <View key={item.id} style={styles.userRow}>
               <View style={styles.userBubble}>
-                <Text style={styles.userText}>{item.text}</Text>
+                {item.typing ? (
+                  <TypingText
+                    text={item.text}
+                    style={styles.userText}
+                    onDone={() => void finishTyping(item.id)}
+                  />
+                ) : (
+                  <Text style={styles.userText}>{item.text}</Text>
+                )}
               </View>
             </View>
           );
