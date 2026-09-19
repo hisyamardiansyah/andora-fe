@@ -12,8 +12,6 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
-import DebugBanner from '@/components/DebugBanner';
-import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
 // Profile screen from Figma node 87-495 ("Profile").
@@ -69,7 +67,6 @@ const MENU: {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useSessionContext();
-  const { debugEnabled, disableDebug } = useDebugMode();
   const [signingOut, setSigningOut] = useState(false);
   const displayName =
     (typeof user?.user_metadata?.full_name === 'string' &&
@@ -92,11 +89,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleExitDebug = async () => {
-    await disableDebug();
-    router.replace('/auth');
-  };
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -107,7 +99,6 @@ export default function ProfileScreen() {
           <Text style={styles.title}>Profil</Text>
           <Text style={styles.subtitle}>Informasi Personal Anda</Text>
         </View>
-        {debugEnabled ? <DebugBanner /> : null}
 
         <View style={styles.avatarBlock}>
           <View style={styles.avatarWrap}>
@@ -151,17 +142,6 @@ export default function ProfileScreen() {
             </Pressable>
           ))}
         </View>
-
-        {debugEnabled ? (
-          <Pressable
-            style={styles.debugExitButton}
-            accessibilityRole="button"
-            accessibilityLabel="Keluar mode debug"
-            onPress={() => void handleExitDebug()}
-          >
-            <Text style={styles.debugExitText}>Keluar Mode Debug</Text>
-          </Pressable>
-        ) : null}
         <Pressable
           style={styles.logoutButton}
           accessibilityRole="button"
@@ -261,21 +241,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: Andora.typography.weight.semibold,
     marginTop: 2,
-  },
-  debugExitButton: {
-    alignSelf: 'center',
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: Andora.colors.warning,
-    borderRadius: Andora.radius.pill,
-  },
-  debugExitText: {
-    color: Andora.colors.primary,
-    fontSize: 16,
-    fontWeight: Andora.typography.weight.semibold,
-    textAlign: 'center',
   },
   logoutButton: {
     alignSelf: 'center',

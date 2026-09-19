@@ -3,15 +3,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
-import DebugBanner from '@/components/DebugBanner';
-import { useDebugMode } from '@/hooks/useDebugMode';
 import { sendRetryRoute } from '@/lib/letterSendRoutes';
 
 // FIGMA Andora (Copy) yguOf0BB6X0G6FBhAVPHb9 node 54-357 -> /assistant/send-error.
 // WhatsApp failure state; retry goes to /assistant/send-retry.
 export default function SendErrorScreen() {
   const router = useRouter();
-  const { debugEnabled } = useDebugMode();
   const { conversationId, message } = useLocalSearchParams<{
     conversationId?: string;
     message?: string;
@@ -24,7 +21,6 @@ export default function SendErrorScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.body}>
         <Text style={styles.brand}>Andora</Text>
-        {debugEnabled ? <DebugBanner /> : null}
         <View style={styles.visual}>
           <Ionicons name="warning" size={120} color={Andora.colors.danger} />
         </View>

@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
-import DebugBanner from '@/components/DebugBanner';
 import { useConversationList } from '@/hooks/useConversations';
 import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
@@ -73,7 +72,6 @@ export default function SessionsScreen() {
             <Text style={styles.subtitle}>Percakapan dengan Andora</Text>
           </View>
         </View>
-        {debugEnabled ? <DebugBanner /> : null}
         <View style={styles.searchRow}>
           <Ionicons
             name="search-outline"

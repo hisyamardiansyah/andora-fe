@@ -129,23 +129,20 @@ export default function AuthScreen() {
         <TouchableOpacity
           onPress={() => void handleDebugMode()}
           activeOpacity={0.85}
-          style={styles.debugButton}
+          style={styles.guestButton}
           accessibilityRole="button"
-          accessibilityLabel="Masuk mode debug"
+          accessibilityLabel="Lanjutkan sebagai tamu"
           disabled={debugBusy}
         >
           <Ionicons
-            name="bug-outline"
+            name="person-outline"
             size={20}
             color={Andora.colors.primary}
           />
-          <Text style={styles.debugText}>
-            {debugBusy ? 'Membuka...' : 'Jelajahi Mode Debug'}
+          <Text style={styles.guestText}>
+            {debugBusy ? 'Membuka...' : 'Lanjutkan sebagai tamu'}
           </Text>
         </TouchableOpacity>
-        <Text style={styles.debugHint}>
-          Lihat semua tampilan tanpa login dan tanpa backend.
-        </Text>
         <View style={styles.privacyRow}>
           <Ionicons
             name="lock-closed"
@@ -248,7 +245,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  debugButton: {
+  guestButton: {
     width: 380,
     maxWidth: '100%',
     height: 55,
@@ -259,20 +256,14 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: Andora.colors.surface,
     borderWidth: 1,
-    borderColor: Andora.colors.warning,
+    borderColor: Andora.colors.borderStrong,
     borderRadius: 20,
   },
-  debugText: {
+  guestText: {
     color: Andora.colors.primary,
     fontSize: Andora.typography.size.title,
     fontWeight: Andora.typography.weight.bold,
     letterSpacing: -0.6,
-  },
-  debugHint: {
-    marginTop: 8,
-    color: Andora.colors.textMuted2,
-    fontSize: Andora.typography.size.body,
-    textAlign: 'center',
   },
   privacyText: {
     flex: 1,

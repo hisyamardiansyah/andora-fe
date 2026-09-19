@@ -5,6 +5,9 @@ import {
   debugFetchLivekitToken,
   debugGetConversationDetail,
   debugListConversations,
+  debugScenarioConversationIds,
+  debugScenarioDocuments,
+  debugScenarioIntent,
   debugSendTextTurn,
   debugSendVoiceTurn,
   debugUploadDocument,
@@ -17,28 +20,21 @@ beforeEach(() => {
 });
 
 describe('debug dummy backend', () => {
-  it('seeds conversation list with previews and history', () => {
+  it('seeds the three beasiswa demo scenarios with history', () => {
+    const ids = debugScenarioConversationIds();
     const items = debugListConversations();
     expect(items.length).toBeGreaterThanOrEqual(3);
     expect(items[0]?.user_id).toBe(DEBUG_USER_ID);
-    const withHistory = items.find(
-      (c) => debugGetConversationDetail(c.id).messages.length > 0
-    );
-    expect(withHistory).toBeDefined();
+    for (const id of [ids.tanya, ids.template, ids.kirim]) {
+      expect(debugGetConversationDetail(id).messages.length).toBeGreaterThan(
+        0
+      );
+    }
   });
 
   it('searches titles and message content', () => {
-    const found = debugListConversations('domisili');
+    const found = debugListConversations('beasiswa');
     expect(found.length).toBeGreaterThan(0);
-    expect(
-      found.every((c) =>
-        [c.title, c.last_message_preview ?? '']
-          .join(' ')
-          .toLowerCase()
-          .includes('domisili')
-      ) ||
-        found.length > 0
-    ).toBe(true);
     expect(debugListConversations('tidak-ada-xyz')).toHaveLength(0);
   });
 
@@ -57,13 +53,26 @@ describe('debug dummy backend', () => {
   });
 
   it('mints livekit token with room andora-{id} and accepts uploads', () => {
-    const token = debugFetchLivekitToken('debug-conv-domisili');
-    expect(token.roomName).toBe('andora-debug-conv-domisili');
+    const ids = debugScenarioConversationIds();
+    const token = debugFetchLivekitToken(ids.tanya);
+    expect(token.roomName).toBe(`andora-${ids.tanya}`);
     expect(token.serverUrl).toMatch(/^wss?:\/\//);
     expect(token.participantToken).not.toBe('');
     expect(debugUploadDocument(token.roomName).roomName).toBe(token.roomName);
     expect(() => debugGetConversationDetail('missing')).toThrow(
       /tidak ditemukan/
     );
+  });
+
+  it('exposes the beasiswa template doc and whatsapp intent', () => {
+    const ids = debugScenarioConversationIds();
+    const docs = debugScenarioDocuments();
+    expect(docs).toHaveLength(1);
+    expect(docs[0]?.conversationId).toBe(ids.template);
+    expect(docs[0]?.fileName.endsWith('.pdf')).toBe(true);
+    const intent = debugScenarioIntent();
+    expect(intent.conversationId).toBe(ids.kirim);
+    expect(intent.fileUrl).toBe(docs[0]?.url);
+    expect(intent.caption).toMatch(/Kaltim Tuntas/);
   });
 });

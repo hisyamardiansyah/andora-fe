@@ -13,10 +13,10 @@ import { roomNameForConversation } from './andoraToken';
 
 export const DEBUG_ACCESS_TOKEN = 'debug-access-token';
 export const DEBUG_USER_ID = 'debug-user-1';
-export const DEBUG_USER_EMAIL = 'debug@andora.id';
-export const DEBUG_USER_NAME = 'Pengguna Debug';
+export const DEBUG_USER_EMAIL = 'rizky.pratama@gmail.com';
+export const DEBUG_USER_NAME = 'Rizky Pratama';
 export const DEBUG_USER_PHONE = '+62 812-3456-7890';
-export const DEBUG_USER_ADDRESS = 'Jl. Merdeka No. 17, Samarinda';
+export const DEBUG_USER_ADDRESS = 'Jl. Pahlawan No. 17, Samarinda, Kalimantan Timur';
 
 let msgCounter = 100;
 
@@ -58,9 +58,9 @@ function conv(
   };
 }
 
-const CONV_DOMISILI = 'debug-conv-domisili';
-const CONV_BEASISWA = 'debug-conv-beasiswa';
-const CONV_KTP = 'debug-conv-ktp';
+const CONV_TANYA_BEASISWA = 'debug-conv-tanya-beasiswa';
+const CONV_TEMPLATE_DOKUMEN = 'debug-conv-template-dokumen';
+const CONV_KIRIM_WHATSAPP = 'debug-conv-kirim-whatsapp';
 
 const store: Map<string, AndoraConversationDetail> = new Map();
 
@@ -75,69 +75,114 @@ function seed(): void {
   const t1 = '2026-09-18T10:00:00+00:00';
   const t2 = '2026-09-18T11:00:00+00:00';
   const t3 = '2026-09-18T12:00:00+00:00';
-  store.set(CONV_DOMISILI, {
+  // Scenario 1: casual Q&A about Beasiswa Kaltim Tuntas.
+  store.set(CONV_TANYA_BEASISWA, {
     ...conv(
-      CONV_DOMISILI,
-      'Surat Keterangan Domisili',
-      'Andora: Baik. Surat domisilinya untuk keperluan apa?',
+      CONV_TANYA_BEASISWA,
+      'Tanya Beasiswa Kaltim Tuntas',
+      'Andora: Pendaftarannya dibuka tiap awal tahun ajaran...',
       t1
     ),
     messages: [
       msg(
-        CONV_DOMISILI,
+        CONV_TANYA_BEASISWA,
         'user',
-        'Halo Andora, saya ingin mengurus surat keterangan domisili.',
+        'Halo Andora, Beasiswa Kaltim Tuntas itu apa sih?',
         'text'
       ),
       msg(
-        CONV_DOMISILI,
+        CONV_TANYA_BEASISWA,
         'assistant',
-        'Baik. Surat domisilinya untuk keperluan apa? Siapkan KTP dan kartu keluarga.',
+        'Halo Rizky! Beasiswa Kaltim Tuntas adalah program bantuan pendidikan dari Pemprov Kalimantan Timur untuk pelajar dan mahasiswa asal Kaltim. Ada dua jalur utama: Beasiswa Tuntas untuk mahasiswa aktif berprestasi, dan Beasiswa Stimulan untuk pelajar SMA/sederajat serta mahasiswa baru.',
+        'text'
+      ),
+      msg(
+        CONV_TANYA_BEASISWA,
+        'user',
+        'Syarat daftar yang jalur Tuntas apa saja?',
+        'text'
+      ),
+      msg(
+        CONV_TANYA_BEASISWA,
+        'assistant',
+        'Untuk jalur Tuntas: (1) KTP/KK Kaltim, (2) terdaftar aktif di kampus minimal semester 2 dengan IPK minimal 3,00, (3) tidak sedang menerima beasiswa lain, (4) surat pernyataan bermeterai, dan (5) transkrip nilai terakhir. Pendaftarannya dibuka tiap awal tahun ajaran lewat portal resmi. Mau saya bantu siapkan surat pernyataannya?',
         'text'
       ),
     ],
   });
-  store.set(CONV_BEASISWA, {
+  // Scenario 2: offered a document template, result file card appears.
+  store.set(CONV_TEMPLATE_DOKUMEN, {
     ...conv(
-      CONV_BEASISWA,
-      'Surat Pernyataan Beasiswa',
-      'Andora: Dokumen beasiswanya sudah saya siapkan.',
+      CONV_TEMPLATE_DOKUMEN,
+      'Template Surat Pernyataan Beasiswa',
+      'Andora: Template surat pernyataannya sudah jadi...',
       t2
     ),
     messages: [
       msg(
-        CONV_BEASISWA,
+        CONV_TEMPLATE_DOKUMEN,
         'user',
-        'Tolong buatkan surat pernyataan beasiswa.',
-        'voice'
+        'Saya mau daftar Beasiswa Kaltim Tuntas jalur Tuntas. Bisa dibuatkan surat pernyataannya?',
+        'text'
       ),
       msg(
-        CONV_BEASISWA,
+        CONV_TEMPLATE_DOKUMEN,
         'assistant',
-        'Dokumen beasiswanya sudah saya siapkan. Mau saya kirim via WhatsApp?',
-        'voice'
+        'Bisa. Saya buatkan template Surat Pernyataan Pendaftar Beasiswa Kaltim Tuntas atas nama Rizky Pratama, NIM 2009106011, Universitas Mulawarman, Fakultas Ilmu Komputer, Jurusan Informatika. Datanya saya ambil dari profil kamu. Saya proses sekarang ya.',
+        'text'
+      ),
+      msg(
+        CONV_TEMPLATE_DOKUMEN,
+        'assistant',
+        'Template surat pernyataannya sudah jadi dalam format PDF. Silakan periksa di kartu dokumen di bawah, lalu unduh atau langsung kirim via WhatsApp.',
+        'text'
       ),
     ],
   });
-  store.set(CONV_KTP, {
-    ...conv(CONV_KTP, 'Percakapan Baru', null, t3),
-    messages: [],
+  // Scenario 3: send the finished PDF via WhatsApp intent.
+  store.set(CONV_KIRIM_WHATSAPP, {
+    ...conv(
+      CONV_KIRIM_WHATSAPP,
+      'Kirim Surat via WhatsApp',
+      'Andora: WhatsApp akan terbuka dengan dokumen terlampir...',
+      t3
+    ),
+    messages: [
+      msg(
+        CONV_KIRIM_WHATSAPP,
+        'user',
+        'Kirim surat pernyataannya ke WhatsApp saya 081234567890.',
+        'voice'
+      ),
+      msg(
+        CONV_KIRIM_WHATSAPP,
+        'assistant',
+        'Siap. Saya siapkan PDF surat pernyataannya, lalu WhatsApp akan terbuka dengan dokumen terlampir ke nomor 081234567890. Kamu tinggal tekan kirim di WhatsApp.',
+        'voice'
+      ),
+    ],
   });
 }
 
 export function mockAssistantReply(content: string): string {
   const text = content.toLowerCase();
-  if (text.includes('domisili')) {
-    return 'Baik. Surat domisilinya untuk keperluan apa? Siapkan KTP dan kartu keluarga.';
+  if (text.includes('kirim') && text.includes('whatsapp')) {
+    return 'Siap. Saya siapkan PDF-nya, lalu WhatsApp akan terbuka dengan dokumen terlampir. Kamu tinggal tekan kirim di WhatsApp.';
   }
-  if (text.includes('beasiswa')) {
-    return 'Siap. Data nama, NIM, dan universitasnya apa? Saya siapkan surat pernyataannya.';
+  if (text.includes('template') || text.includes('buatkan surat') || text.includes('dibuatkan surat')) {
+    return 'Bisa. Saya buatkan template Surat Pernyataan Pendaftar Beasiswa Kaltim Tuntas atas nama kamu. Saya proses sekarang ya, hasilnya muncul sebagai kartu dokumen di bawah.';
+  }
+  if (text.includes('syarat') || text.includes('daftar')) {
+    return 'Untuk jalur Tuntas: (1) KTP/KK Kaltim, (2) mahasiswa aktif minimal semester 2 dengan IPK minimal 3,00, (3) tidak sedang menerima beasiswa lain, (4) surat pernyataan bermeterai, dan (5) transkrip nilai terakhir. Mau saya bantu siapkan surat pernyataannya?';
+  }
+  if (text.includes('kaltim tuntas') || text.includes('beasiswa')) {
+    return 'Beasiswa Kaltim Tuntas adalah program bantuan pendidikan dari Pemprov Kalimantan Timur untuk pelajar dan mahasiswa asal Kaltim. Ada dua jalur: Beasiswa Tuntas untuk mahasiswa aktif berprestasi, dan Beasiswa Stimulan untuk pelajar dan mahasiswa baru. Kamu mau tanya syaratnya atau langsung saya buatkan surat pernyataannya?';
   }
   if (text.includes('surat') || text.includes('dokumen')) {
     return 'Saya catat kebutuhan suratnya. Dokumen apa yang ingin dibuat lebih dulu?';
   }
   if (/(halo|hallo|hai|pagi|siang|sore|malam)/.test(text)) {
-    return 'Halo, saya Andora. Ada yang bisa saya bantu untuk mengurus dokumen?';
+    return 'Halo, saya Andora. Ada yang bisa saya bantu untuk mengurus dokumen, misalnya info Beasiswa Kaltim Tuntas?';
   }
   return `Saya catat: "${content}". Mau dilanjutkan ke pembuatan surat?`;
 }
@@ -242,8 +287,7 @@ export function debugSendVoiceTurn(
 
 export function debugFetchLivekitToken(
   conversationId: string
-): AndoraLivekitToken {
-  const roomName = roomNameForConversation(conversationId);
+): AndoraLivekitToken {  const roomName = roomNameForConversation(conversationId);
   return {
     serverUrl: 'wss://debug-livekit.andora.local',
     participantToken: `debug-participant-token-${conversationId}`,
@@ -258,4 +302,55 @@ export function debugUploadDocument(roomName: string): { roomName: string } {
     throw new Error('Room belum dipilih.');
   }
   return { roomName: name };
+}
+
+// Scenario documents shown in demo mode: a finished random PDF plus the
+// WhatsApp intent payload the worker would emit for scenario 3.
+export interface DebugScenarioDocument {
+  conversationId: string;
+  namaDokumen: string;
+  fileName: string;
+  url: string;
+}
+
+export interface DebugScenarioIntent {
+  conversationId: string;
+  phoneNumber: string;
+  fileUrl: string;
+  fileName: string;
+  caption: string;
+}
+
+export function debugScenarioDocuments(): DebugScenarioDocument[] {
+  return [
+    {
+      conversationId: CONV_TEMPLATE_DOKUMEN,
+      namaDokumen: 'Surat Pernyataan Pendaftar Beasiswa Kaltim Tuntas',
+      fileName: 'surat-pernyataan-beasiswa-kaltim-tuntas.pdf',
+      url: 'https://storage.andora.local/surat-pernyataan-beasiswa-kaltim-tuntas.pdf',
+    },
+  ];
+}
+
+export function debugScenarioIntent(): DebugScenarioIntent {
+  const doc = debugScenarioDocuments()[0];
+  return {
+    conversationId: CONV_KIRIM_WHATSAPP,
+    phoneNumber: '6281234567890',
+    fileUrl: doc?.url ?? '',
+    fileName: doc?.fileName ?? '',
+    caption: 'Surat Pernyataan Pendaftar Beasiswa Kaltim Tuntas dari Andora',
+  };
+}
+
+export function debugScenarioConversationIds(): {
+  tanya: string;
+  template: string;
+  kirim: string;
+} {
+  return {
+    tanya: CONV_TANYA_BEASISWA,
+    template: CONV_TEMPLATE_DOKUMEN,
+    kirim: CONV_KIRIM_WHATSAPP,
+  };
 }

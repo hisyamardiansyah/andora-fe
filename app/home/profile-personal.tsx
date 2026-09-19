@@ -13,14 +13,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AndoraNavbar from '@/components/AndoraNavbar';
-import DebugBanner from '@/components/DebugBanner';
-import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
 export default function ProfilePersonalScreen() {
   const router = useRouter();
   const { user } = useSessionContext();
-  const { debugEnabled } = useDebugMode();
   const sessionName =
     (typeof user?.user_metadata?.full_name === 'string' &&
       user.user_metadata.full_name) ||
@@ -77,7 +74,6 @@ export default function ProfilePersonalScreen() {
             <Text style={styles.subtitle}>Lihat dan ubah data diri</Text>
           </View>
         </View>
-        {debugEnabled ? <DebugBanner /> : null}
 
         <View style={styles.avatarBlock}>
           <Image

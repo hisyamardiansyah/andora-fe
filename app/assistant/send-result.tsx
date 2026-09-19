@@ -3,20 +3,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
-import DebugBanner from '@/components/DebugBanner';
-import { useDebugMode } from '@/hooks/useDebugMode';
 
 // FIGMA Andora (Copy) yguOf0BB6X0G6FBhAVPHb9 node 48-289 -> /assistant/send-result.
 // Success state; error is handled by /assistant/send-error.
 // Card shows the actual send time plus optional title/recipient params.
 export default function SendResultScreen() {
   const router = useRouter();
-  const { debugEnabled } = useDebugMode();
-  const { ok, title, recipient, conversationId } = useLocalSearchParams<{
+  const { ok, title, recipient } = useLocalSearchParams<{
     ok?: string;
     title?: string;
     recipient?: string;
-    conversationId?: string;
   }>();
   void ok;
   const sentAt = new Date().toLocaleString('id-ID', {
@@ -31,7 +27,6 @@ export default function SendResultScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.body}>
         <Text style={styles.brand}>Andora</Text>
-        {debugEnabled ? <DebugBanner /> : null}
         <View style={styles.visual}>
           <Ionicons
             name="checkmark-circle"
@@ -50,14 +45,6 @@ export default function SendResultScreen() {
           <Text style={styles.cardTitle}>
             {typeof title === 'string' && title ? title : 'Surat Andora'}
           </Text>
-          {debugEnabled &&
-          typeof conversationId === 'string' &&
-          conversationId ? (
-            <View style={styles.row}>
-              <Text style={styles.label}>Conversation</Text>
-              <Text style={styles.value}>{conversationId}</Text>
-            </View>
-          ) : null}
           <View style={styles.row}>
             <Text style={styles.label}>Pengiriman Via</Text>
             <Text style={styles.value}>WhatsApp</Text>

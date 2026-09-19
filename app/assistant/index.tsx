@@ -16,7 +16,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Andora } from '@/constants/Andora';
 import AssistantOrb from '@/components/AssistantOrb';
-import DebugBanner from '@/components/DebugBanner';
 import { useConnection } from '@/hooks/useConnection';
 import { useConversationDetail } from '@/hooks/useConversations';
 import { useDebugMode } from '@/hooks/useDebugMode';
@@ -32,6 +31,10 @@ import {
   debugSendVoiceTurn,
   debugUploadDocument,
 } from '@/lib/debugMockBackend';
+import {
+  generateDemoScenarioPdf,
+  randomDemoCaption,
+} from '@/lib/demoScenarioPdf';
 import { roomNameForConversation } from '@/lib/andoraToken';
 import { downloadRemoteFile } from '@/lib/downloadLetterPdf';
 import { shareFileToWhatsApp } from '@/lib/shareLetter';
@@ -102,7 +105,13 @@ export default function AssistantChatScreen() {
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [sharingDoc, setSharingDoc] = useState(false);
   const [readyDocs, setReadyDocs] = useState<
-    { id: string; namaDokumen: string; url: string }[]
+    {
+      id: string;
+      namaDokumen: string;
+      url: string;
+      localUri?: string;
+      fileName?: string;
+    }[]
   >([]);
   const [voiceStatusOverride, setVoiceStatusOverride] = useState<
     'recording' | 'processing' | null
@@ -227,11 +236,25 @@ export default function AssistantChatScreen() {
     router.back();
   };
 
-  const handleDocumentReady = (namaDokumen: string, url: string) => {
+  const handleDocumentReady = (
+    namaDokumen: string,
+    url: string,
+    localUri?: string,
+    fileName?: string
+  ) => {
     setReadyDocs((prev) =>
       prev.some((d) => d.namaDokumen === namaDokumen && d.url === url)
         ? prev
-        : [...prev, { id: `doc-${Date.now()}`, namaDokumen, url }]
+        : [
+            ...prev,
+            {
+              id: `doc-${Date.now()}`,
+              namaDokumen,
+              url,
+              localUri,
+              fileName,
+            },
+          ]
     );
     setDocNotice(`Dokumen ${namaDokumen} sudah siap.`);
   };
@@ -241,11 +264,14 @@ export default function AssistantChatScreen() {
     fileUrl: string;
     fileName: string;
     caption?: string;
+    localUri?: string;
   }) => {
     setSharingDoc(true);
     setDocError(null);
     try {
-      const uri = await downloadRemoteFile(signal.fileUrl, signal.fileName);
+      const uri =
+        signal.localUri ??
+        (await downloadRemoteFile(signal.fileUrl, signal.fileName));
       const type = signal.fileName.toLowerCase().endsWith('.pdf')
         ? 'application/pdf'
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -306,10 +332,9 @@ export default function AssistantChatScreen() {
         setDocNotice(
           `Dokumen terunggah ke ${uploadedRoom}_latest.pdf. Andora akan membacanya.`
         );
-        handleDocumentReady(
-          'surat_pernyataan_beasiswa',
-          'https://storage.andora.local/surat_pernyataan_beasiswa.docx'
-        );
+        // Scenario 2: the worker finishes the template as a random PDF.
+        const pdf = await generateDemoScenarioPdf();
+        handleDocumentReady(pdf.docTitle, pdf.uri, pdf.uri, pdf.fileName);
       } catch (e) {
         setDocError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -393,7 +418,7 @@ export default function AssistantChatScreen() {
       try {
         const turn = debugSendVoiceTurn(
           id,
-          'Tolong buatkan surat pernyataan beasiswa.'
+          'Kirim surat pernyataannya ke WhatsApp saya 081234567890.'
         );
         setLocalItems((prev) => [
           ...prev,
@@ -409,12 +434,17 @@ export default function AssistantChatScreen() {
           },
         ]);
         await refresh();
-        if (id) {
-          handleDocumentReady(
-            'surat_pernyataan_beasiswa',
-            'https://storage.andora.local/surat_pernyataan_beasiswa.docx'
-          );
-        }
+        // Scenario 3: finished random PDF arrives, then the WhatsApp
+        // intent signal opens share with the same file.
+        const pdf = await generateDemoScenarioPdf();
+        handleDocumentReady(pdf.docTitle, pdf.uri, pdf.uri, pdf.fileName);
+        await handleWhatsAppSignal({
+          phoneNumber: '6281234567890',
+          fileUrl: pdf.uri,
+          fileName: pdf.fileName,
+          caption: randomDemoCaption(pdf.referenceNo),
+          localUri: pdf.uri,
+        });
       } catch (e) {
         setVoiceError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -466,7 +496,6 @@ export default function AssistantChatScreen() {
           <View style={styles.headerSpacer} />
         )}
       </View>
-      {debugEnabled ? <DebugBanner /> : null}
       {!isConnected ? (
         <View style={styles.statusBanner}>
           <Text style={styles.statusText}>
@@ -587,20 +616,63 @@ export default function AssistantChatScreen() {
               />
               <Text style={styles.docTitle}>{doc.namaDokumen}</Text>
             </View>
-            <Text style={styles.docMeta}>Dokumen sudah dibuat backend.</Text>
-            <Pressable
-              onPress={() => void downloadRemoteFile(doc.url, doc.namaDokumen)}
-              style={styles.docCta}
-              accessibilityRole="button"
-              accessibilityLabel={`Unduh ${doc.namaDokumen}`}
-            >
-              <Ionicons
-                name="download"
-                size={18}
-                color={Andora.colors.onPrimary}
-              />
-              <Text style={styles.docCtaText}>Download</Text>
-            </Pressable>
+            <Text style={styles.docMeta}>
+              {doc.fileName ?? 'Dokumen PDF sudah siap.'}
+            </Text>
+            <View style={styles.docRow}>
+              <Pressable
+                onPress={() =>
+                  void (async () => {
+                    try {
+                      const uri =
+                        doc.localUri ??
+                        (await downloadRemoteFile(doc.url, doc.fileName));
+                      await shareFileToWhatsApp(uri, {
+                        mimeType: 'application/pdf',
+                        filename: doc.fileName ?? 'surat-andora.pdf',
+                        message: `Berikut ${doc.namaDokumen} dari Andora.`,
+                      });
+                    } catch (e) {
+                      setDocError(e instanceof Error ? e.message : String(e));
+                    }
+                  })()
+                }
+                style={styles.docCta}
+                accessibilityRole="button"
+                accessibilityLabel={`Kirim ${doc.namaDokumen} via WhatsApp`}
+              >
+                <Ionicons
+                  name="logo-whatsapp"
+                  size={18}
+                  color={Andora.colors.onPrimary}
+                />
+                <Text style={styles.docCtaText}>Kirim via WhatsApp</Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  void (async () => {
+                    try {
+                      const uri =
+                        doc.localUri ??
+                        (await downloadRemoteFile(doc.url, doc.fileName));
+                      setDocNotice(`Dokumen tersimpan di ${uri}.`);
+                    } catch (e) {
+                      setDocError(e instanceof Error ? e.message : String(e));
+                    }
+                  })()
+                }
+                style={styles.docGhostCta}
+                accessibilityRole="button"
+                accessibilityLabel={`Unduh ${doc.namaDokumen}`}
+              >
+                <Ionicons
+                  name="download"
+                  size={18}
+                  color={Andora.colors.primary}
+                />
+                <Text style={styles.docGhostCtaText}>Download</Text>
+              </Pressable>
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -805,6 +877,7 @@ const styles = StyleSheet.create({
     fontWeight: Andora.typography.weight.medium,
   },
   docCta: {
+    flex: 1,
     flexDirection: 'row',
     gap: 8,
     backgroundColor: Andora.colors.primary,
@@ -816,6 +889,24 @@ const styles = StyleSheet.create({
   },
   docCtaText: {
     color: Andora.colors.onPrimary,
+    fontSize: Andora.typography.size.bodyLarge,
+    fontWeight: Andora.typography.weight.bold,
+  },
+  docRow: { flexDirection: 'row', gap: 8 },
+  docGhostCta: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Andora.colors.borderStrong,
+    borderRadius: 10,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Andora.spacing.md,
+  },
+  docGhostCtaText: {
+    color: Andora.colors.primary,
     fontSize: Andora.typography.size.bodyLarge,
     fontWeight: Andora.typography.weight.bold,
   },
