@@ -401,10 +401,8 @@ export default function AssistantChatScreen() {
         setVoiceError('Pilih percakapan dulu sebelum bicara.');
         return;
       }
-      // While holding, show only the user bubble after a short beat.
-      if (micHoldRef.current?.timer) {
-        clearTimeout(micHoldRef.current.timer);
-      }
+      // Ignore a new hold while a demo turn is still playing out.
+      if (micHoldRef.current || voiceStatusOverride) return;
       const script = debugMicScript();
       const step = micStepRef.current[id] ?? 0;
       const exchange = script[step % script.length];
@@ -465,21 +463,13 @@ export default function AssistantChatScreen() {
       }
       setVoiceStatusOverride('processing');
       try {
-        // Make sure the user bubble exists even on a quick tap.
-        setLocalItems((prev) =>
-          prev.some((i) => i.id === held.userItemId)
-            ? prev
-            : [
-                ...prev,
-                { kind: 'user', id: held.userItemId, text: exchange.user },
-              ]
-        );
-        await new Promise((resolve) => setTimeout(resolve, 700));
         const turn = debugAppendVoiceExchange(id, exchange);
-        // Show only the assistant bubble on release: the user bubble
-        // above stands in for the persisted user message.
+        // Replace the hold-time user bubble with the persisted ids so
+        // the transcript shows each message exactly once after refresh.
         setLocalItems((prev) => [
-          ...prev.filter((i) => i.id !== turn.user_message.id),
+          ...prev.filter(
+            (i) => i.id !== held.userItemId && i.id !== turn.user_message.id
+          ),
           {
             kind: 'andora',
             id: turn.assistant_message.id,
