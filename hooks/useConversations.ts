@@ -1,4 +1,6 @@
 // Backend-backed conversation list/detail/send-message state.
+// In debug mode the hooks serve the in-memory dummy backend so the full
+// workflow is explorable without a live andora-be.
 import { useCallback, useEffect, useState } from 'react';
 import {
   createConversation,
@@ -6,6 +8,13 @@ import {
   listConversations,
   sendMessage,
 } from '@/lib/andoraApi';
+import {
+  debugCreateConversation,
+  debugGetConversationDetail,
+  debugListConversations,
+  debugSendTextTurn,
+} from '@/lib/debugMockBackend';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import type {
   AndoraChatTurn,
   AndoraConversation,
@@ -19,11 +28,24 @@ function message(error: unknown): string {
 
 export function useConversationList(search?: string) {
   const { accessToken } = useSessionContext();
+  const { debugEnabled } = useDebugMode();
   const [items, setItems] = useState<AndoraConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (debugEnabled) {
+      setLoading(true);
+      setError(null);
+      try {
+        setItems(debugListConversations(search));
+      } catch (e) {
+        setError(message(e));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     if (!accessToken) {
       setLoading(false);
       setItems([]);
@@ -38,7 +60,7 @@ export function useConversationList(search?: string) {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, search]);
+  }, [accessToken, search, debugEnabled]);
 
   useEffect(() => {
     void refresh();
@@ -46,12 +68,17 @@ export function useConversationList(search?: string) {
 
   const create = useCallback(
     async (title?: string) => {
+      if (debugEnabled) {
+        const created = debugCreateConversation(title);
+        setItems((prev) => [created, ...prev]);
+        return created;
+      }
       if (!accessToken) throw new Error('Belum masuk.');
       const created = await createConversation(fetch, accessToken, title);
       setItems((prev) => [created, ...prev]);
       return created;
     },
-    [accessToken]
+    [accessToken, debugEnabled]
   );
 
   return { items, loading, error, refresh, create };
@@ -59,13 +86,30 @@ export function useConversationList(search?: string) {
 
 export function useConversationDetail(conversationId: string | null) {
   const { accessToken } = useSessionContext();
+  const { debugEnabled } = useDebugMode();
   const [detail, setDetail] = useState<AndoraConversationDetail | null>(null);
   const [loading, setLoading] = useState(Boolean(conversationId));
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!accessToken || !conversationId) {
+    if (!conversationId) {
+      setLoading(false);
+      return;
+    }
+    if (debugEnabled) {
+      setLoading(true);
+      setError(null);
+      try {
+        setDetail(debugGetConversationDetail(conversationId));
+      } catch (e) {
+        setError(message(e));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    if (!accessToken) {
       setLoading(false);
       return;
     }
@@ -80,7 +124,7 @@ export function useConversationDetail(conversationId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, conversationId]);
+  }, [accessToken, conversationId, debugEnabled]);
 
   useEffect(() => {
     void refresh();
@@ -88,18 +132,19 @@ export function useConversationDetail(conversationId: string | null) {
 
   const send = useCallback(
     async (content: string): Promise<AndoraChatTurn> => {
-      if (!accessToken || !conversationId) {
+      if (!conversationId) {
         throw new Error('Belum masuk atau conversation belum dipilih.');
       }
       setSending(true);
       try {
-        const turn = await sendMessage(
-          fetch,
-          accessToken,
-          conversationId,
-          content,
-          'text'
-        );
+        const turn = debugEnabled
+          ? debugSendTextTurn(conversationId, content)
+          : await (async () => {
+              if (!accessToken) {
+                throw new Error('Belum masuk atau conversation belum dipilih.');
+              }
+              return sendMessage(fetch, accessToken, conversationId, content, 'text');
+            })();
         setDetail((prev) =>
           prev
             ? {
@@ -117,7 +162,7 @@ export function useConversationDetail(conversationId: string | null) {
         setSending(false);
       }
     },
-    [accessToken, conversationId]
+    [accessToken, conversationId, debugEnabled]
   );
 
   return { detail, loading, error, sending, refresh, send };

@@ -28,6 +28,11 @@ import {
   parseWhatsAppIntent,
   uploadDocumentForConversation,
 } from '@/lib/andoraDocuments';
+import {
+  debugSendVoiceTurn,
+  debugUploadDocument,
+} from '@/lib/debugMockBackend';
+import { roomNameForConversation } from '@/lib/andoraToken';
 import { downloadRemoteFile } from '@/lib/downloadLetterPdf';
 import { shareFileToWhatsApp } from '@/lib/shareLetter';
 import {
@@ -99,11 +104,14 @@ export default function AssistantChatScreen() {
   const [readyDocs, setReadyDocs] = useState<
     { id: string; namaDokumen: string; url: string }[]
   >([]);
+  const [voiceStatusOverride, setVoiceStatusOverride] = useState<
+    'recording' | 'processing' | null
+  >(null);
   const scrollRef = useRef<ScrollView | null>(null);
   const autoJoinedRef = useRef(false);
 
   const {
-    status: voiceStatus,
+    status: liveVoiceStatus,
     holdToTalk,
     releaseToSend,
   } = useVoiceTurn(room, {
@@ -140,13 +148,18 @@ export default function AssistantChatScreen() {
     },
   });
 
-  const isConnected = connectionState === ConnectionState.Connected;
+  const voiceStatus = voiceStatusOverride ?? liveVoiceStatus;
+  const isConnected =
+    debugEnabled || connectionState === ConnectionState.Connected;
   const isRecording = voiceStatus === 'recording';
   const isProcessing =
     voiceStatus === 'processing' || voiceStatus === 'recording';
 
   // Auto-join the andora-{id} voice room when opened with ?voice=1.
+  // In debug mode there is no LiveKit room; the mic simulates a full
+  // voice turn against the dummy backend instead.
   useEffect(() => {
+    if (debugEnabled) return;
     if (
       voice === '1' &&
       typeof conversationId === 'string' &&
@@ -163,7 +176,7 @@ export default function AssistantChatScreen() {
           setVoiceError(e instanceof Error ? e.message : String(e));
         });
     }
-  }, [voice, conversationId, accessToken, connection]);
+  }, [voice, conversationId, accessToken, connection, debugEnabled]);
 
   const items: ChatItem[] = [
     ...(detail?.messages.map(
@@ -282,6 +295,28 @@ export default function AssistantChatScreen() {
       setDocError('Pilih percakapan dulu sebelum mengunggah dokumen.');
       return;
     }
+    if (debugEnabled) {
+      setDocError(null);
+      setDocNotice(null);
+      setUploadingDoc(true);
+      try {
+        const { roomName: uploadedRoom } = debugUploadDocument(
+          roomNameForConversation(conversationId)
+        );
+        setDocNotice(
+          `Dokumen terunggah ke ${uploadedRoom}_latest.pdf. Andora akan membacanya.`
+        );
+        handleDocumentReady(
+          'surat_pernyataan_beasiswa',
+          'https://storage.andora.local/surat_pernyataan_beasiswa.docx'
+        );
+      } catch (e) {
+        setDocError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setUploadingDoc(false);
+      }
+      return;
+    }
     if (!accessToken) {
       setDocError('Belum masuk. Masuk dulu dengan akun Google.');
       return;
@@ -325,6 +360,10 @@ export default function AssistantChatScreen() {
 
   const handleMicIn = async () => {
     setVoiceError(null);
+    if (debugEnabled) {
+      setVoiceStatusOverride('recording');
+      return;
+    }
     try {
       await localParticipant?.setMicrophoneEnabled(true);
     } catch {
@@ -343,6 +382,46 @@ export default function AssistantChatScreen() {
   };
 
   const handleMicOut = async () => {
+    if (debugEnabled) {
+      const id = typeof conversationId === 'string' ? conversationId : '';
+      if (!id) {
+        setVoiceError('Pilih percakapan dulu sebelum bicara.');
+        setVoiceStatusOverride(null);
+        return;
+      }
+      setVoiceStatusOverride('processing');
+      try {
+        const turn = debugSendVoiceTurn(
+          id,
+          'Tolong buatkan surat pernyataan beasiswa.'
+        );
+        setLocalItems((prev) => [
+          ...prev,
+          {
+            kind: 'user',
+            id: turn.user_message.id,
+            text: turn.user_message.content,
+          },
+          {
+            kind: 'andora',
+            id: turn.assistant_message.id,
+            text: turn.assistant_message.content,
+          },
+        ]);
+        await refresh();
+        if (id) {
+          handleDocumentReady(
+            'surat_pernyataan_beasiswa',
+            'https://storage.andora.local/surat_pernyataan_beasiswa.docx'
+          );
+        }
+      } catch (e) {
+        setVoiceError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setVoiceStatusOverride(null);
+      }
+      return;
+    }
     try {
       await releaseToSend();
     } catch (e) {

@@ -11,6 +11,13 @@ import {
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import {
+  DEBUG_ACCESS_TOKEN,
+  DEBUG_USER_EMAIL,
+  DEBUG_USER_ID,
+  DEBUG_USER_NAME,
+} from '@/lib/debugMockBackend';
+import { useDebugMode } from '@/hooks/useDebugMode';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -52,11 +59,34 @@ function errorMessage(error: unknown): string {
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const configured = isSupabaseConfigured();
+  const { debugEnabled } = useDebugMode();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const debugSession = useMemo(
+    () =>
+      ({
+        access_token: DEBUG_ACCESS_TOKEN,
+        token_type: 'bearer',
+        expires_in: 3600,
+        refresh_token: 'debug-refresh-token',
+        user: {
+          id: DEBUG_USER_ID,
+          email: DEBUG_USER_EMAIL,
+          user_metadata: { full_name: DEBUG_USER_NAME },
+        },
+      }) as unknown as Session,
+    []
+  );
+
   useEffect(() => {
+    if (debugEnabled) {
+      setSession(debugSession);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     if (!configured) {
       setLoading(false);
       return;
@@ -85,10 +115,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [configured]);
+  }, [configured, debugEnabled, debugSession]);
 
   const signInWithGoogle = useCallback(async () => {
     setError(null);
+    if (debugEnabled) {
+      setSession(debugSession);
+      return;
+    }
     const supabase = getSupabase();
     const redirectTo = createURL('auth/callback');
     const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -116,10 +150,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (exchangeError) {
       throw new Error(exchangeError.message);
     }
-  }, []);
+  }, [debugEnabled, debugSession]);
 
   const signOut = useCallback(async () => {
     setError(null);
+    if (debugEnabled) {
+      setSession(null);
+      return;
+    }
     if (!configured) {
       setSession(null);
       return;
@@ -129,7 +167,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       throw new Error(signOutError.message);
     }
     setSession(null);
-  }, [configured]);
+  }, [configured, debugEnabled]);
 
   const value = useMemo<SessionContextType>(
     () => ({

@@ -13,6 +13,8 @@ import {
 } from 'react';
 import { SessionProvider, useSession } from '@livekit/components-react';
 import { andoraApiBaseUrl, fetchLivekitToken } from '@/lib/andoraApi';
+import { debugFetchLivekitToken } from '@/lib/debugMockBackend';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
 const sandboxID = process.env.EXPO_PUBLIC_LIVEKIT_SANDBOX_ID ?? '';
@@ -65,11 +67,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const [isConnectionActive, setIsConnectionActive] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const { accessToken: sessionToken } = useSessionContext();
+  const { debugEnabled } = useDebugMode();
   const pendingRef = useRef<PendingVoiceAuth | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
   sessionTokenRef.current = sessionToken;
 
   const tokenSource = useMemo(() => {
+    if (debugEnabled) {
+      const fetchDebugToken = async (
+        _options: TokenSourceFetchOptions
+      ): Promise<TokenSourceResponseObject> => {
+        const conversationId = pendingRef.current?.conversationId ?? '';
+        if (!conversationId) {
+          throw new Error(
+            'Conversation belum dibuat. Mulai percakapan baru dulu.'
+          );
+        }
+        return debugFetchLivekitToken(conversationId);
+      };
+      return TokenSource.custom(fetchDebugToken);
+    }
     if (backendConfigured()) {
       const fetchBackendToken = async (
         _options: TokenSourceFetchOptions
@@ -100,7 +117,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         'Backend andora-be belum dikonfigurasi. Isi EXPO_PUBLIC_ANDORA_API_URL.'
       );
     });
-  }, []);
+  }, [debugEnabled]);
 
   const session = useSession(
     tokenSource,

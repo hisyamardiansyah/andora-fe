@@ -17,6 +17,7 @@ import {
   sendOkRoute,
 } from '@/lib/letterSendRoutes';
 import { SHARE_CANCELLED_CODE, shareLetterToWhatsApp } from '@/lib/shareLetter';
+import { useDebugMode } from '@/hooks/useDebugMode';
 import { useSessionContext } from '@/hooks/useSession';
 
 // FIGMA Andora (Copy) yguOf0BB6X0G6FBhAVPHb9 node 54-408 -> /assistant/send-retry.
@@ -30,6 +31,7 @@ export default function SendRetryScreen() {
     conversationId?: string;
   }>();
   const { accessToken } = useSessionContext();
+  const { debugEnabled } = useDebugMode();
   const [status, setStatus] = useState('Menyiapkan dokumen...');
   const [hint, setHint] = useState('');
 
@@ -40,6 +42,15 @@ export default function SendRetryScreen() {
         const docId = resolveDocId(
           typeof conversationId === 'string' ? conversationId : undefined
         );
+        if (debugEnabled) {
+          await new Promise((resolve) => setTimeout(resolve, 900));
+          if (cancelled) return;
+          setStatus('Mengirim ulang dokumen Anda...');
+          await new Promise((resolve) => setTimeout(resolve, 900));
+          if (cancelled) return;
+          router.replace(sendOkRoute(docId));
+          return;
+        }
         const uri = await downloadLetterPdf(docId, {
           accessToken: accessToken ?? undefined,
         });
@@ -72,7 +83,7 @@ export default function SendRetryScreen() {
     return () => {
       cancelled = true;
     };
-  }, [router, accessToken, conversationId]);
+  }, [router, accessToken, conversationId, debugEnabled]);
 
   return (
     <SafeAreaView style={styles.safe}>

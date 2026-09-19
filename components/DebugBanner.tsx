@@ -13,7 +13,7 @@ export default function DebugBanner({ text }: { text?: string }) {
     >
       <Ionicons name="bug-outline" size={14} color={Andora.colors.primary} />
       <Text style={styles.text}>
-        {text ?? 'Mode debug: backend tidak dipakai, data tidak tersimpan'}
+        {text ?? 'Mode debug: data dummy mirip backend, tidak tersimpan'}
       </Text>
     </View>
   );
