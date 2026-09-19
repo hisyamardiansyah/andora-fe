@@ -41,7 +41,13 @@ jobs:
     name: Build & release APK
     runs-on: ubuntu-latest
     env:
-      # Di-inline Metro saat bundling JS (lihat hooks/useConnection.tsx).
+      # Di-inline Metro saat bundling JS — wajib agar build tersambung ke backend.
+      EXPO_PUBLIC_ANDORA_API_URL: ${{ secrets.EXPO_PUBLIC_ANDORA_API_URL }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_ANDORA_LETTER_URL: ${{ secrets.EXPO_PUBLIC_ANDORA_LETTER_URL }}
+      EXPO_PUBLIC_LIVEKIT_AGENT_NAME: ${{ secrets.EXPO_PUBLIC_LIVEKIT_AGENT_NAME }}
+      # Legacy dev fallback (boleh kosong).
       EXPO_PUBLIC_LIVEKIT_SANDBOX_ID: ${{ secrets.EXPO_PUBLIC_LIVEKIT_SANDBOX_ID }}
       # Keystore rilis. Kalau secret ini kosong, APK tetap dibuat tetapi
       # ditandatangani dengan debug keystore bawaan Expo prebuild.
