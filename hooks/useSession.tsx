@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { authCallbackErrorMessage, parseAuthCallbackUrl } from '@/lib/authCallback';
 import {
   DEBUG_ACCESS_TOKEN,
   DEBUG_USER_ADDRESS,
@@ -146,15 +147,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       err.code = SESSION_CANCELLED_CODE;
       throw err;
     }
-    const code = new URL(result.url).searchParams.get('code');
-    if (!code) {
-      throw new Error('Login Google gagal: kode otorisasi tidak ditemukan');
+    // Supabase may put the code in ?query or #fragment; parse both.
+    const parsed = parseAuthCallbackUrl(result.url);
+    const callbackError = authCallbackErrorMessage(parsed);
+    if (callbackError) {
+      throw new Error(callbackError);
     }
+    const code = parsed.code as string;
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
       code
     );
     if (exchangeError) {
-      throw new Error(exchangeError.message);
+      throw new Error(`Login Google gagal: ${exchangeError.message}`);
     }
   }, [debugEnabled, debugSession]);
 
